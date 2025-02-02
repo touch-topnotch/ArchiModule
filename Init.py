@@ -26,22 +26,26 @@ __title__="FreeCAD GeoData2 Toolkit"
 __author__ = "Thomas Gundermann & al"
 __url__ = "http://www.freecadbuch.de"
 __vers__ ="py3.01"
-import PySide
-import FreeCAD as App
 
-try:
-    import cv2
-except:
-    App.Console.PrintWarning("GeoData2 WB: Cannot import module named cv2. Some import might not be available.\n")
+import sys, types
+mod = types.ModuleType("FreeCAD")
+sys.modules["FreeCAD"] = mod
+# import PySide
+# import FreeCAD as App
 
-try:
-    import gdal
-    import gdalconst
-except:
-    App.Console.PrintWarning("GeoData2 WB: Cannot import module named gdal gdalconst. Some import might not be available.\n")
+# try:
+#     import cv2
+# except:
+#     App.Console.PrintWarning("GeoData2 WB: Cannot import module named cv2. Some import might not be available.\n")
 
-App.addImportType("OSM format (*.osm)","importOSM")
-App.addExportType("CSV format (*.csv *.tsv)","importCSV")
+# try:
+#     import gdal
+#     import gdalconst
+# except:
+#     App.Console.PrintWarning("GeoData2 WB: Cannot import module named gdal gdalconst. Some import might not be available.\n")
+
+# App.addImportType("OSM format (*.osm)","importOSM")
+# App.addExportType("CSV format (*.csv *.tsv)","importCSV")
 
 
 
