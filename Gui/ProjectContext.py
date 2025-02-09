@@ -1,14 +1,14 @@
 import FreeCADGui
 import FreeCAD
 # For FreeCAD macros, normally you already have a QApplication running,
-# so you often don't need to create another QApplication. 
+# so you often don't need to create another QApplication.
 # But for clarity, we include it here in case you're testing outside or as a snippet.
 from PySide2.QtCore import Qt,  QTimer,  QThread, QMetaObject, Slot
 from PySide2.QtGui import (QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
-                          QPushButton, QSlider, QLineEdit, QDoubleSpinBox,
-                          QGroupBox, QFormLayout, QScrollArea, QApplication, QDockWidget,
-                          QFileDialog, QPixmap, QPainter, QPainterPath, QGridLayout,
-                          QSizePolicy)
+                           QPushButton, QSlider, QLineEdit, QDoubleSpinBox,
+                           QGroupBox, QFormLayout, QScrollArea, QApplication, QDockWidget,
+                           QFileDialog, QPixmap, QPainter, QPainterPath, QGridLayout,
+                           QSizePolicy)
 from PySide2 import QtCore
 from pivy.coin import SoSeparator
 from pivy.coin import SoCube, SoTranslation, SoRenderManager, SoDB, SoInput
@@ -36,7 +36,7 @@ class ImageData:
         self.heights = [0 for i in range(imageStyle.number_of_cols)]
         self.height_by_id = [0 for i in range(imageStyle.number_of_cols)]
 
-          # --- Subheader: Sketches ---
+        # --- Subheader: Sketches ---
         label = QLabel(label_text)
         label.setStyleSheet("font-size: 14pt; font-weight: bold;")
         self.imageStyle.main_layout.addWidget(label)
@@ -53,7 +53,7 @@ class ImageData:
         horizontal_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         horizontal_layout.setContentsMargins(0, 0, 0, 0)
         horizontal_layout.setSpacing(self.imageStyle.gap)
-    
+
         self.vlayouts = []
         for _ in range(self.imageStyle.number_of_cols):
             vlayout = QVBoxLayout()
@@ -65,8 +65,8 @@ class ImageData:
         horizontal_layout.setSpacing(self.imageStyle.gap)
         content.setLayout(horizontal_layout)
         self.imageStyle.main_layout.addWidget(scroll_area)
-        
-   
+
+
         add_button = QPushButton(button_text)
         add_button.clicked.connect(self.select_and_add_images)
 
@@ -80,9 +80,9 @@ class ImageData:
         """
         # Open file dialog. On macOS, this will use the native Finder dialog.
         file_names, _ = QFileDialog.getOpenFileNames(
-            self.imageStyle.parent_class, 
-            "Select one or more images", 
-            "", 
+            self.imageStyle.parent_class,
+            "Select one or more images",
+            "",
             "Image Files (*.png *.jpg *.jpeg *.bmp *.gif)"
         )
         if not file_names:
@@ -119,17 +119,17 @@ class ImageData:
             images.append(img_label)
             print(self.heights)
             y = self.heights.index(min(self.heights))
-            
+
             self.vlayouts[y].insertWidget(0, img_label)
 
-    
+
             self.heights[y] += pixmap.height() + self.imageStyle.gap
         return images
-    
+
 class MdiQuarterWidget(QuarterWidget):
     def __init__(self, parent, sharewidget):
         QuarterWidget.__init__(self, parent=parent, sharewidget=sharewidget)
-    
+
     def minimumSizeHint(self):
         return QtCore.QSize(640, 480)
 
@@ -170,7 +170,7 @@ class MiniView3D(QWidget):
         self.quarter_widget.setSceneGraph(self.scene_root)
         print("SceneGraph successfully attached to QuarterWidget!")
 class ArchiContextWindow(QDockWidget):
-    
+
     def __init__(self, parent=None):
 
         super(ArchiContextWindow, self).__init__(parent)
@@ -179,7 +179,7 @@ class ArchiContextWindow(QDockWidget):
         central_widget = QWidget()
         self.setWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        
+
         image_style = ImageStyle(
             3,
             10,
@@ -248,13 +248,13 @@ def run_archi_context():
     dock_widget.show()
     return dock_widget  # Keep a reference so it's not garbage-collected
 
-mw = FreeCADGui.getMainWindow()
-dock_widgets = mw.findChildren(QDockWidget)
-for widget in dock_widgets:
-    if widget.windowTitle() == "Project Context":
-        widget.close()
-        break
-ai_w = run_archi_context()
+# mw = FreeCADGui.getMainWindow()
+# dock_widgets = mw.findChildren(QDockWidget)
+# for widget in dock_widgets:
+#     if widget.windowTitle() == "Project Context":
+#         widget.close()
+#         break
+# ai_w = run_archi_context()
 # For direct testing outside FreeCAD:
 # if __name__ == "__main__":
 #     app = QApplication(sys.argv)

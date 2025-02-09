@@ -1,0 +1,7 @@
+<RCC>
+    <qresource>
+        <file>icons/Archi_Workbench.svg</file>
+        <file>icons/Archi_FloorPlaner.svg</file>
+        <file>icons/Archi_ProjectContext.svg</file>
+    </qresource>
+</RCC>

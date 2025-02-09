@@ -1,0 +1,85 @@
+#add ArchiGui here
+include_directories(
+        ${CMAKE_BINARY_DIR}
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${Boost_INCLUDE_DIRS}
+        ${COIN3D_INCLUDE_DIRS}
+        ${ZLIB_INCLUDE_DIR}
+        ${OCC_INCLUDE_DIR}
+        ${EIGEN3_INCLUDE_DIR}
+        ${PYTHON_INCLUDE_DIRS}
+        ${XercesC_INCLUDE_DIRS}
+)
+link_directories(${OCC_LIBRARY_DIR})
+set(ArchiGui_LIBS
+        Archi
+        FreeCADGui
+)
+
+
+set (Archi_TR_QRC ${CMAKE_CURRENT_BINARY_DIR}/Resources/Archi_translation.qrc)
+qt_find_and_add_translation(QM_SRCS "Resources/translations/*_*.ts"
+        ${CMAKE_CURRENT_BINARY_DIR}/Resources/translations)
+qt_create_resource_file(${Archi_TR_QRC} ${QM_SRCS})
+qt_add_resources(ArchiResource_SRCS Resources/Archi.qrc ${Archi_TR_QRC})
+SOURCE_GROUP("Resources" FILES ${ArchiResource_SRCS})
+
+
+
+SET(ArchiGui_SRCS_Module
+        ArchiGui.cpp
+        Resources/Archi.qrc
+        ProjectContextWindow.cpp
+        ProjectContextWindow.h
+        PreCompiled.cpp
+        PreCompiled.h
+        Workbench.cpp
+        Workbench.h
+)
+SOURCE_GROUP("Module" FILES ${ArchiGui_SRCS_Module})
+
+SET(ArchiGui_SRCS_Commands
+        Command.cpp
+)
+SOURCE_GROUP("Commands" FILES ${ArchiGui_SRCS_Commands})
+
+
+SET(ArchiGui_SRCS
+        ${ArchiGui_UIC_HDRS}
+        ${ArchiResource_SRCS}
+        ${ArchiGui_SRCS_Module}
+        ${ArchiGui_SRCS_Commands}
+)
+
+if(FREECAD_USE_PCH)
+    add_definitions(-D_PreComp_)
+    GET_MSVC_PRECOMPILED_SOURCE("PreCompiled.cpp" PCH_SRCS ${ArchiGui_SRCS})
+    ADD_MSVC_PRECOMPILED_HEADER(ArchiGui PreCompiled.h PreCompiled.cpp PCH_SRCS)
+endif(FREECAD_USE_PCH)
+
+SET(ArchiGuiIcon_SVG
+        Resources/icons/Archi_Workbench.svg
+
+)
+
+add_library(ArchiGui SHARED ${ArchiGui_SRCS} ${ArchiGuiIcon_SVG})
+target_link_libraries(ArchiGui ${ArchiGui_LIBS})
+if (FREECAD_WARN_ERROR)
+    target_compile_warn_error(ArchiGui)
+endif()
+
+unset(_flag_found CACHE)
+check_cxx_compiler_flag("-Wno-deprecated-copy" _flag_found)
+if (_flag_found)
+    target_compile_options(ArchiGui PRIVATE -Wno-deprecated-copy)
+endif ()
+
+
+SET_BIN_DIR(ArchiGui ArchiGui /Mod/Archi)
+SET_PYTHON_PREFIX_SUFFIX(ArchiGui)
+
+fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi" ${ArchiGuiIcon_SVG})
+
+INSTALL(TARGETS ArchiGui DESTINATION ${CMAKE_INSTALL_LIBDIR})
+INSTALL(FILES ${ArchiGuiIcon_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/icons")
