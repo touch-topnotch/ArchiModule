@@ -19,9 +19,9 @@ set(ArchiGui_LIBS
 
 
 set (Archi_TR_QRC ${CMAKE_CURRENT_BINARY_DIR}/Resources/Archi_translation.qrc)
-qt_find_and_add_translation(QM_SRCS "Resources/translations/*_*.ts"
-        ${CMAKE_CURRENT_BINARY_DIR}/Resources/translations)
+qt_find_and_add_translation(QM_SRCS "Resources/translations/*_*.ts" ${CMAKE_CURRENT_BINARY_DIR}/Resources/translations)
 qt_create_resource_file(${Archi_TR_QRC} ${QM_SRCS})
+
 qt_add_resources(ArchiResource_SRCS Resources/Archi.qrc ${Archi_TR_QRC})
 SOURCE_GROUP("Resources" FILES ${ArchiResource_SRCS})
 
@@ -30,8 +30,6 @@ SOURCE_GROUP("Resources" FILES ${ArchiResource_SRCS})
 SET(ArchiGui_SRCS_Module
         ArchiGui.cpp
         Resources/Archi.qrc
-        ProjectContextWindow.cpp
-        ProjectContextWindow.h
         PreCompiled.cpp
         PreCompiled.h
         Workbench.cpp
@@ -60,10 +58,15 @@ endif(FREECAD_USE_PCH)
 
 SET(ArchiGuiIcon_SVG
         Resources/icons/Archi_Workbench.svg
-
+)
+SET(ArchiGuiAnims_SVG
+        Resources/anims/Archi_Preloader.svg
+)
+SET(ArchiGenerations3d_GLTF
+        Resources/3d/scene.gltf
 )
 
-add_library(ArchiGui SHARED ${ArchiGui_SRCS} ${ArchiGuiIcon_SVG})
+add_library(ArchiGui SHARED ${ArchiGui_SRCS} ${ArchiGuiIcon_SVG} ${ArchiGuiAnims_SVG} ${ArchiGenerations3d_GLTF})
 target_link_libraries(ArchiGui ${ArchiGui_LIBS})
 if (FREECAD_WARN_ERROR)
     target_compile_warn_error(ArchiGui)
@@ -80,6 +83,21 @@ SET_BIN_DIR(ArchiGui ArchiGui /Mod/Archi)
 SET_PYTHON_PREFIX_SUFFIX(ArchiGui)
 
 fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi" ${ArchiGuiIcon_SVG})
+file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi/*")
+
+
+fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi" ${ArchiGuiAnims_SVG})
+file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi/*")
+
+
+fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi" ${ArchiGenerations3d_GLTF})
+file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi/*")
+
 
 INSTALL(TARGETS ArchiGui DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+
 INSTALL(FILES ${ArchiGuiIcon_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/icons")
+INSTALL(FILES ${ArchiGuiAnims_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/anims")
+INSTALL(FILES ${ArchiGenerations3d_GLTF} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/generations3d")
+INSTALL(FILES ${AtchiPanels_UI} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/panels")

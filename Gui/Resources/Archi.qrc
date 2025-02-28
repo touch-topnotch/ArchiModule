@@ -3,5 +3,7 @@
         <file>icons/Archi_Workbench.svg</file>
         <file>icons/Archi_FloorPlaner.svg</file>
         <file>icons/Archi_ProjectContext.svg</file>
+        <file>icons/Archi_BackgroundGradient.svg</file>
+        <file>anims/Archi_Preloader.svg</file>
     </qresource>
 </RCC>

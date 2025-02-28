@@ -100,6 +100,7 @@ Gui::MenuItem* Workbench::setupMenuBar() const
    Gui::MenuItem* AiTools = new Gui::MenuItem;
    AiTools->setCommand("AI Tools");
    *AiTools << "Archi_ProjectContext"
-            << "Archi_FloorPlaner";
+            << "Archi_FloorPlaner"
+            << "Archi_Authentication";
    return root;
 }

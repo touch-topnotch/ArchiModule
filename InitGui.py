@@ -1,54 +1,72 @@
-# Archi gui init module
-# (c) 2009 Juergen Riegel
-#
-# Gathering all the information to start FreeCAD
-# This is the second one of three init scripts, the third one
-# runs when the gui is up
+# filepath: /Users/dmitry057/Projects/DeepL/archi-ve/FreeCAD/src/Mod/Archi/InitGui.py
+import FreeCAD
+import FreeCADGui
 
-# ***************************************************************************
-# *   Copyright (c) 2009 Juergen Riegel <juergen.riegel@web.de>             *
-# *                                                                         *
-# *   This file is part of the FreeCAD CAx development system.              *
-# *                                                                         *
-# *   This program is free software; you can redistribute it and/or modify  *
-# *   it under the terms of the GNU Lesser General Public License (LGPL)    *
-# *   as published by the Free Software Foundation; either version 2 of     *
-# *   the License, or (at your option) any later version.                   *
-# *   for detail see the LICENCE text file.                                 *
-# *                                                                         *
-# *   FreeCAD is distributed in the hope that it will be useful,            *
-# *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
-# *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
-# *   GNU Lesser General Public License for more details.                   *
-# *                                                                         *
-# *   You should have received a copy of the GNU Library General Public     *
-# *   License along with FreeCAD; if not, write to the Free Software        *
-# *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
-# *   USA                                                                   *
-# *                                                                         *
-# ***************************************************************************/
+
+class Archi_Sketch3d_Command:
+    def GetResources(self):
+        return {
+            "MenuText": "3D Sketch",
+            "ToolTip": "Create or edit a 3D sketch",
+            "Pixmap": "Archi_Sketch3d"
+        }
+
+    def Activated(self):
+        FreeCAD.Console.PrintMessage("Archi_Sketch3d activated\n")
+
+    def IsActive(self):
+        return True
+
+
+class Archi_FloorPlaner_Command:
+    def GetResources(self):
+        return {
+            "MenuText": "Floor Planer",
+            "ToolTip": "Create or modify floor plans",
+            "Pixmap": "Archi_FloorPlaner"
+        }
+
+    def Activated(self):
+        FreeCAD.Console.PrintMessage("Archi_FloorPlaner activated\n")
+
+    def IsActive(self):
+        return True
 
 
 class ArchiWorkbench(Workbench):
-    "Archi workbench object"
+    """Archi workbench."""
 
     def __init__(self):
-        self.__class__.Icon = (
-                FreeCAD.getResourceDir() + "Mod/Archi/Resources/icons/Archi_Workbench.svg"
-        )
-        self.__class__.MenuText = "ArchI"
-        self.__class__.ToolTip = "ArchI workbench"
+        self.__class__.Icon = FreeCAD.getResourceDir() + "Mod/Archi/Resources/icons/Archi_Workbench.svg"
+        self.__class__.MenuText = "Archi"
+        self.__class__.ToolTip = "Archi workbench"
 
     def Initialize(self):
-        try:
-            import ArchiGui
-            import Archi
-        except Exception as e:
-            FreeCAD.Console.PrintError("Error loading Archi module: " + str(e) + "\n")
+        import Archi
+        import ArchiGui
+
+        import ProjectContext
+        import Authentication
+        import MasterAPI
+
+        masterAPI = MasterAPI.MasterAPI("http://89.169.36.93:8001")
+        FreeCADGui.addCommand("Archi_ProjectContext", ProjectContext.Archi_ProjectContext_Command())
+        # FreeCADGui.addCommand("Archi_Sketch3d", Archi_Sketch3d_Command())
+        FreeCADGui.addCommand("Archi_Authentication", Authentication.Archi_Authentication_Command(masterAPI=masterAPI))
+
+    def Activated(self):
+        # Add commands to menu
+        self.appendMenu("Archi", ["Archi_ProjectContext", "Archi_Authentication"])
+        # Add commands to toolbars
+        self.appendToolbar("Archi Tools", ["Archi_ProjectContext"])
+        # Run authentication after everything is initialized
+
+        FreeCADGui.runCommand("Archi_Authentication")
+
+    def Deactivated(self):
+        pass
 
     def GetClassName(self):
-        return "ArchiGui::Workbench"
+        return "Gui::Workbench"
 
-# check if the workbench is already installed
-if not hasattr(FreeCAD, "ArchiWorkbench"):
-    Gui.addWorkbench(ArchiWorkbench())
+Gui.addWorkbench(ArchiWorkbench())

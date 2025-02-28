@@ -1,0 +1,16 @@
+﻿
+<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+	<rect width="300" height="300" fill="url(#gradient-fill)"/>
+	<defs>
+		<radialGradient id="gradient-fill" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5" gradientUnits="objectBoundingBox">
+			<stop offset="0" stop-color="#313131" />
+			<stop offset="0.14285714285714285" stop-color="#2b2b2b" />
+			<stop offset="0.2857142857142857" stop-color="#252525" />
+			<stop offset="0.42857142857142855" stop-color="#1f1f1f" />
+			<stop offset="0.5714285714285714" stop-color="#191919" />
+			<stop offset="0.7142857142857143" stop-color="#131313" />
+			<stop offset="0.8571428571428571" stop-color="#0b0b0b" />
+			<stop offset="1" stop-color="#000000" />
+		</radialGradient>
+	</defs>
+</svg>

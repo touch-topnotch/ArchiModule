@@ -30,90 +30,154 @@
 #include <Gui/Control.h>
 #include <Gui/Document.h>
 #include <Gui/MainWindow.h>
-#include "ProjectContextWindow.h"
+#include <Python.h>
+
 
 
 using namespace std;
-
-DEF_STD_CMD_A(CmdProjectContext)
-
-CmdProjectContext::CmdProjectContext()
-    : Command("Archi_ProjectContext")
-{
-    sAppModule = "Archi";
-    sGroup = QT_TR_NOOP("Archi");
-    sMenuText = QT_TR_NOOP("Add Project Context...");
-    sToolTipText = QT_TR_NOOP("Add Project Context (experimental!)");
-    sWhatsThis = "Archi_ProjectContext";
-    sStatusTip = sToolTipText;
-    sPixmap = "Archi_ProjectContext";
-}
-void CmdProjectContext::activated(int)
-{
-    Gui::Document* pcDoc = Gui::Application::Instance->activeDocument();
-    if (pcDoc) {
-        // print to console
-        Base::Console().Message("Project Context activated\n");
-        // create project context window
-        auto* projectContextWindow = ProjectContextWindow::instance(Gui::getMainWindow());
-        //adjust the window to the right side of screen
-        projectContextWindow->move(Gui::getMainWindow()->pos().x() + Gui::getMainWindow()->width(), Gui::getMainWindow()->pos().y());
-        projectContextWindow->show();
-
-    }
-}
-bool CmdProjectContext::isActive()
-{
-    return (hasActiveDocument() && !Gui::Control().activeDialog());
-}
-
-DEF_STD_CMD_A(CmdFloorPlaner)
-
-CmdFloorPlaner::CmdFloorPlaner()
-    : Command("Archi_FloorPlaner")
-{
-    sAppModule = "Archi";
-    sGroup = QT_TR_NOOP("Archi");
-    sMenuText = QT_TR_NOOP("Create Floor Planer...");
-    sToolTipText = QT_TR_NOOP("Create Floor Planer (experimental!)");
-    sWhatsThis = "Archi_FloorPlaner";
-    sStatusTip = sToolTipText;
-    sPixmap = "Archi_FloorPlaner";
-}
-void CmdFloorPlaner::activated(int)
-{
-    Gui::Document* pcDoc = Gui::Application::Instance->activeDocument();
-    if (pcDoc) {
-        // print to console
-        Base::Console().Message("Floor Planer activated\n");
-    }
-}
-bool CmdFloorPlaner::isActive()
-{
-    return (hasActiveDocument() && !Gui::Control().activeDialog());
-}
-
-DEF_STD_CMD_A(CmdArchiSimulate)
-
-void CmdArchiSimulate::activated(int)
-{
-    Gui::Document* pcDoc = Gui::Application::Instance->activeDocument();
-    if (pcDoc) {
-        //pcDoc->openTransaction("Simulate Archi");
-        //pcDoc->commitTransaction();
-    }
-}
-
-bool CmdArchiSimulate::isActive()
-{
-    return (hasActiveDocument() && !Gui::Control().activeDialog());
-}
+//
+//DEF_STD_CMD_A(CmdAuthentication)
+//
+//CmdAuthentication::CmdAuthentication()
+//    : Command("Archi_Authentication")
+//{
+//    sAppModule = "Archi";
+//    sGroup = QT_TR_NOOP("Archi");
+//    sMenuText = QT_TR_NOOP("Add Project Context...");
+//    sToolTipText = QT_TR_NOOP("Add Project Context (experimental!)");
+//    sWhatsThis = "Archi_Authentication";
+//    sStatusTip = sToolTipText;
+//    sPixmap = "Archi_Authentication";
+//}
+//void CmdAuthentication::activated(int)
+//{
+//    Gui::Document* pcDoc = Gui::Application::Instance->activeDocument();
+//    if (pcDoc) {
+//        // print to console
+//        Base::Console().Message("Auth Window activated\n");
+//        // create project context window
+//        auto* AuthenticationWindow = AuthenticationWindow::instance(Gui::getMainWindow());
+//        //adjust the window to the right side of screen
+//        AuthenticationWindow->move(Gui::getMainWindow()->pos().x() + Gui::getMainWindow()->width(), Gui::getMainWindow()->pos().y());
+//        AuthenticationWindow->show();
+//
+//    }
+//}
+//bool CmdAuthentication::isActive()
+//{
+//    return (hasActiveDocument() && !Gui::Control().activeDialog());
+//}
+//
+//DEF_STD_CMD_A(CmdProjectContext)
+//
+//CmdProjectContext::CmdProjectContext()
+//    : Command("Archi_ProjectContext")
+//{
+//    sAppModule = "Archi";
+//    sGroup = QT_TR_NOOP("Archi");
+//    sMenuText = QT_TR_NOOP("Add Project Context...");
+//    sToolTipText = QT_TR_NOOP("Add Project Context (experimental!)");
+//    sWhatsThis = "Archi_ProjectContext";
+//    sStatusTip = sToolTipText;
+//    sPixmap = "Archi_ProjectContext";
+//}
+//void CmdProjectContext::activated(int)
+//{
+//    Gui::Document* pcDoc = Gui::Application::Instance->activeDocument();
+//    if (pcDoc) {
+//        // print to console
+//        Base::Console().Message("Project Context activated\n");
+//        // create project context window using "ProjectContext.py" and function ArchiContextWindow(QDockWidget):
+//        PyObject* pName = PyUnicode_DecodeFSDefault("ProjectContext");
+//        Base::Console().Message("PyObject* pName = PyUnicode_DecodeFSDefault(\"ProjectContext\");\n");
+//        PyObject* pModule = PyImport_Import(pName);
+//        Base::Console().Message("PyObject* pModule = PyImport_Import(pName);");
+//        Py_DECREF(pName);
+//        Base::Console().Message("Py_DECREF(pName);");
+//
+//        if (pModule != nullptr) {
+//            PyObject* pFunc = PyObject_GetAttrString(pModule, "ArchiContextWindow");
+//            if (PyCallable_Check(pFunc)) {
+//                PyObject* pArgs = PyTuple_Pack(1, Py_None);
+//                PyObject* pValue = PyObject_CallObject(pFunc, pArgs);
+//                Py_DECREF(pArgs);
+//                if (pValue != nullptr) {
+//                    // Successfully created the window
+//                    Base::Console().Message("Project Context window created\n");
+//                    Py_DECREF(pValue);
+//                } else {
+//                    Py_DECREF(pFunc);
+//                    Py_DECREF(pModule);
+//                    PyErr_Print();
+//                    Base::Console().Error("Failed to create Project Context window\n");
+//                    return;
+//                }
+//            } else {
+//                if (PyErr_Occurred())
+//                    PyErr_Print();
+//                Base::Console().Error("Cannot find function 'ArchiContextWindow'\n");
+//            }
+//            Py_XDECREF(pFunc);
+//            Py_DECREF(pModule);
+//        } else {
+//            PyErr_Print();
+//            Base::Console().Error("Failed to load 'ProjectContext' module\n");
+//            return;
+//        }
+//    }
+//}
+//bool CmdProjectContext::isActive()
+//{
+//    return (hasActiveDocument() && !Gui::Control().activeDialog());
+//}
+//
+//DEF_STD_CMD_A(CmdFloorPlaner)
+//
+//CmdFloorPlaner::CmdFloorPlaner()
+//    : Command("Archi_FloorPlaner")
+//{
+//    sAppModule = "Archi";
+//    sGroup = QT_TR_NOOP("Archi");
+//    sMenuText = QT_TR_NOOP("Create Floor Planer...");
+//    sToolTipText = QT_TR_NOOP("Create Floor Planer (experimental!)");
+//    sWhatsThis = "Archi_FloorPlaner";
+//    sStatusTip = sToolTipText;
+//    sPixmap = "Archi_FloorPlaner";
+//}
+//void CmdFloorPlaner::activated(int)
+//{
+//    Gui::Document* pcDoc = Gui::Application::Instance->activeDocument();
+//    if (pcDoc) {
+//        // print to console
+//        Base::Console().Message("Floor Planer activated\n");
+//    }
+//}
+//bool CmdFloorPlaner::isActive()
+//{
+//    return (hasActiveDocument() && !Gui::Control().activeDialog());
+//}
+//
+//DEF_STD_CMD_A(CmdArchiSimulate)
+//
+//void CmdArchiSimulate::activated(int)
+//{
+//    Gui::Document* pcDoc = Gui::Application::Instance->activeDocument();
+//    if (pcDoc) {
+//        //pcDoc->openTransaction("Simulate Archi");
+//        //pcDoc->commitTransaction();
+//    }
+//}
+//
+//bool CmdArchiSimulate::isActive()
+//{
+//    return (hasActiveDocument() && !Gui::Control().activeDialog());
+//}
 
 void CreateArchiCommands()
 {
     Gui::CommandManager &rcCmdMgr = Gui::Application::Instance->commandManager();
     //rcCmdMgr.addCommand(new CmdArchiSimulate());
-    rcCmdMgr.addCommand(new CmdProjectContext());
-    rcCmdMgr.addCommand(new CmdFloorPlaner());
+//    rcCmdMgr.addCommand(new CmdProjectContext());
+//    rcCmdMgr.addCommand(new CmdFloorPlaner());
 
 }
