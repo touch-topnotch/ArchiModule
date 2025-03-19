@@ -45,12 +45,12 @@ class ArchiWorkbench(Workbench):
         import Archi
         import ArchiGui
 
-        import ProjectContext
+        # import ProjectContext
         import Authentication
         import MasterAPI
 
         masterAPI = MasterAPI.MasterAPI("http://89.169.36.93:8001")
-        FreeCADGui.addCommand("Archi_ProjectContext", ProjectContext.Archi_ProjectContext_Command())
+        # FreeCADGui.addCommand("Archi_ProjectContext", ProjectContext.Archi_ProjectContext_Command())
         # FreeCADGui.addCommand("Archi_Sketch3d", Archi_Sketch3d_Command())
         FreeCADGui.addCommand("Archi_Authentication", Authentication.Archi_Authentication_Command(masterAPI=masterAPI))
 

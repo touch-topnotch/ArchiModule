@@ -55,6 +55,7 @@ set(ToolsPython_SRCS
         Tools/GalleryUtils.py
         Tools/Exporting.py
         Tools/FullView.py
+        Tools/ConvertPNG.py
 )
 set(AllScriptsPython_SRCS
         ${ToolsPython_SRCS}

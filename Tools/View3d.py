@@ -5,16 +5,26 @@ from PySide2.QtCore import (Property, QObject, QPropertyAnimation, Signal, QUrl)
 from PySide2.QtGui import (QMatrix4x4)
 from PySide2.QtGui import QVector3D, QColor
 from pydantic import BaseModel, ConfigDict
+from Tools import Models
 
-class View3DData(BaseModel):
-    obj_path: QUrl|str
-    texture_diffuse_path: QUrl|str=None
-    texture_normal_path: QUrl|str=None
-    texture_specular_path: QUrl|str=None
-    scale: QVector3D = QVector3D(1, 1, 1)
-    position: QVector3D = QVector3D(0, 0, 0)
-    rotation: QVector3D = QVector3D(0, 0, 0)
-    
+
+class View3DStyle(BaseModel):
+    model_scale: float = 100
+    model_position: QVector3D = QVector3D(0, 0, 0)
+    should_rotate: bool = True
+    rotation_speed: int = 10000
+    light_intensity: int = 1
+    light_color: QColor = QColor.fromRgbF(1.0, 1.0, 0.7)
+    light_direction: QVector3D = QVector3D(0, 0, 0)
+    camera_position: QVector3D = QVector3D(0, 15, 40)
+    camera_view_center: QVector3D = QVector3D(0, 0, 0)
+    camera_fov: int = 45
+    camera_aspect_ratio: float = 16 / 9
+    camera_near_plane: float = 0.1
+    camera_far_plane: float = 1000
+    camera_linear_speed: int = 50
+    camera_look_speed: int = 180
+    background_color: QColor = QColor(140, 140, 140)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
 class OrbitTransformController(QObject):
@@ -62,42 +72,49 @@ class OrbitTransformController(QObject):
     radius = Property(float, getRadius, setRadius, notify=radiusChanged)
 
 class View3DWindow(Qt3DExtras.Qt3DWindow):
-
-    def __init__(self, data:View3DData, parent=None):
+    data: Models.Gen3dResult
+    
+    def __init__(self, data:Models.Gen3dResult, view_3d_style: View3DStyle = None, parent=None):
         super(View3DWindow, self).__init__(parent)
         
         self.data = data
+        if(view_3d_style is None):
+            view_3d_style = View3DStyle()
+        self.view_3d_style = view_3d_style
 
         # ✅ Set up Frame Graph
         self.frameGraph = self.activeFrameGraph()
 
-        self.frameGraph.setClearColor(QColor(20, 20, 20))
+        self.frameGraph.setClearColor(self.view_3d_style.background_color)
         self.create_scene(data)
         
-    def create_scene(self, data: View3DData):
+    def create_scene(self, data: Models.Gen3dResult):
         # Create Root Entity
         self.rootEntity = Qt3DCore.QEntity()
 
         # Камера
-        self.camera().lens().setPerspectiveProjection(45, 16 / 9, 0.1, 1000)
-        self.camera().setPosition(QVector3D(0, 15, 40))
-        self.camera().setViewCenter(QVector3D(0, 0, 0))
+        self.camera().lens().setPerspectiveProjection(self.view_3d_style.camera_fov, self.view_3d_style.camera_aspect_ratio, self.view_3d_style.camera_near_plane, self.view_3d_style.camera_far_plane)
+        self.camera().setPosition(self.view_3d_style.camera_position)
+        self.camera().setViewCenter(self.view_3d_style.camera_view_center)
 
-        # Контроллер камеры
-        self.camController = Qt3DExtras.QOrbitCameraController(self.rootEntity)
-        self.camController.setLinearSpeed(50)
-        self.camController.setLookSpeed(180)
-        self.camController.setCamera(self.camera())
-
+        # Add mouse interaction for rotation
+        self.mouseController = Qt3DExtras.QOrbitCameraController(self.rootEntity)
+        self.mouseController.setCamera(self.camera())
+        self.mouseController.setLinearSpeed(self.view_3d_style.camera_linear_speed)
+        self.mouseController.setLookSpeed(self.view_3d_style.camera_look_speed)
+        self.mouseController.setAcceleration(10.0)
+        self.mouseController.setDeceleration(1.0)
+        self.mouseController.setZoomInLimit(1.0)
+        
         # Освещение
         lightEntity = Qt3DCore.QEntity(self.rootEntity)
-        light = Qt3DRender.QPointLight(lightEntity)
-        light.setColor(QColor.fromRgbF(1.0, 1.0, 0.7))
-        light.setIntensity(1)
+        light = Qt3DRender.QDirectionalLight(lightEntity)
+        light.setWorldDirection(self.view_3d_style.light_direction)
+        light.setColor(self.view_3d_style.light_color)
+        light.setIntensity(self.view_3d_style.light_intensity)
         lightEntity.addComponent(light)
 
         lightTransform = Qt3DCore.QTransform(lightEntity)
-        lightTransform.setTranslation(self.camera().position())
         lightEntity.addComponent(lightTransform)
 
         # Устанавливаем корневую сущность в 3D-окно
@@ -107,43 +124,71 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         # ✅ Load .obj Model
         self.objEntity = Qt3DCore.QEntity(self.rootEntity)
         self.objMesh = Qt3DRender.QMesh()
-        self.objMesh.setSource(data.obj_path)  # ✅ Change this to your .obj file path
-
+        self.objMesh.setSource(QUrl.fromLocalFile(data.object.obj_url))
         self.objTransform = Qt3DCore.QTransform()
-        self.objTransform.setScale3D(QVector3D(1, 1, 1))  # Adjust the scale if needed
-        self.objTransform.setTranslation(QVector3D(0, 0, 0))  # Adjust position if needed
-        # set parent of offset to entity
-        # ✅ Apply Material
+        self.objTransform.setScale3D(QVector3D(self.view_3d_style.model_scale, self.view_3d_style.model_scale, self.view_3d_style.model_scale))  # Adjust the scale if needed
+        self.objTransform.setTranslation(self.view_3d_style.model_position)  # Adjust the position if needed
+
+  
+
         self.objMaterial = Qt3DExtras.QDiffuseSpecularMaterial(self.rootEntity)
         self.objMaterial.setDiffuse(QVector3D(1.0,  1, 1))  # Orange color (change as needed)
-        self.objMaterial.setShininess(0)  # Adjust shininess as needed
-        self.objMaterial.setSpecular(QVector3D(0.3, 0.3, 0.3))  # Adjust specular as needed
+        self.objMaterial.setShininess(1)  # Adjust shininess as needed
+        self.objMaterial.setSpecular(QVector3D(0.9, 0.9, 0.9))  # Adjust specular as needed
+        
 
-        if(data.texture_diffuse_path):
-            # ✅ Load Texture (if .mat file contains a texture)
-            self.texture = Qt3DRender.QTexture2D()
-            self.textureImage = Qt3DRender.QTextureImage()
-            self.textureImage.setSource(data.texture_diffuse_path)  # ✅ Replace with actual texture path
-            self.texture.addTextureImage(self.textureImage)
-            self.objMaterial.setDiffuse(self.texture)
+        
+        # ✅ Load Texture (if .mat file contains a texture)
+        self.alphaTexture = Qt3DRender.QTexture2D()
+        self.alphaTextureImage = Qt3DRender.QTextureImage()
+        self.alphaTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.base_color_url))  # ✅ Replace with actual texture path
+        self.alphaTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
+        self.alphaTexture.addTextureImage(self.alphaTextureImage)
+        self.objMaterial.setDiffuse(self.alphaTexture)
+        self.objMaterial.setShininess(0.0)
+
+
+        # self.normalTexture = Qt3DRender.QTexture2D()
+        # self.normalTextureImage = Qt3DRender.QTextureImage()
+        # self.normalTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.normal_url))  # ✅ Replace with actual texture path
+        # self.normalTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
+        # self.normalTexture.addTextureImage(self.normalTextureImage)
+        # self.objMaterial.setNormal(self.normalTexture)
+        
+        # self.roughnessTexture = Qt3DRender.QTexture2D()
+        # self.roughnessTextureImage = Qt3DRender.QTextureImage()
+        # self.roughnessTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.roughness_url))  # ✅ Replace with actual texture path
+        # self.roughnessTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
+        # self.roughnessTexture.addTextureImage(self.roughnessTextureImage)
+        # self.objMaterial.setRoughness(self.roughnessTexture)
+        
+        # self.metallicTexture = Qt3DRender.QTexture2D()
+        # self.metallicTextureImage = Qt3DRender.QTextureImage()
+        # self.metallicTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.metallic_url))  # ✅ Replace with actual texture path
+        # self.metallicTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
+        # self.metallicTexture.addTextureImage(self.metallicTextureImage)
+        # self.objMaterial.setMetallic(self.metallicTexture)
 
         # Attach components to entity
         self.objEntity.addComponent(self.objMesh)
-        self.objEntity.addComponent(self.objTransform)
         self.objEntity.addComponent(self.objMaterial)
-
+        self.objEntity.addComponent(self.objTransform)
+        
+         # Attach components to entity
         self.controller = OrbitTransformController(self.objTransform)
         self.controller.setTarget(self.objTransform)
         self.controller.setRadius(0)
 
-        self.objRotateTransformAnimation = QPropertyAnimation(self.objTransform)
-        self.objRotateTransformAnimation.setTargetObject(self.controller)
-        self.objRotateTransformAnimation.setPropertyName(b"angle")
-        self.objRotateTransformAnimation.setStartValue(0)
-        self.objRotateTransformAnimation.setEndValue(360)
-        self.objRotateTransformAnimation.setDuration(10000)
-        self.objRotateTransformAnimation.setLoopCount(-1)
-        self.objRotateTransformAnimation.start()
+        if(self.view_3d_style.should_rotate):
+            self.objRotateTransformAnimation = QPropertyAnimation(self.objTransform)
+            self.objRotateTransformAnimation.setTargetObject(self.controller)
+            self.objRotateTransformAnimation.setPropertyName(b"angle")
+            self.objRotateTransformAnimation.setStartValue(0)
+            self.objRotateTransformAnimation.setEndValue(360)
+            self.objRotateTransformAnimation.setDuration(self.view_3d_style.rotation_speed)
+            self.objRotateTransformAnimation.setLoopCount(-1)
+            self.objRotateTransformAnimation.start()
+            
     def close(self):
         self.objRotateTransformAnimation.stop()
         self.objRotateTransformAnimation.deleteLater()

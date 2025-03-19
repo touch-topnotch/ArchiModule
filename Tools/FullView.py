@@ -5,14 +5,15 @@ from PySide2.QtWidgets import QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDi
 from PySide2.QtSvg import QSvgWidget
 from PySide2.QtCore import QTimer, QPoint
 from PySide2.QtCore import Qt
-from Tools.View3d import View3DWindow, View3DData
+from Tools.View3d import View3DWindow
 from Tools import Exporting
-from typing import List, Dict
-from pydantic import BaseModel, ConfigDict
+from Tools import Models
+from typing import List, Dict, Callable
+from pydantic import BaseModel, ConfigDict, SkipValidation
 
 class FullViewButtonData(BaseModel):
     name:str
-    action: callable = None
+    action: SkipValidation[Callable] = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
      
 class FullViewWindowData(BaseModel):
@@ -39,7 +40,6 @@ class FullViewWindow(QDockWidget):
         if data is None:
             return
         self.close()
-        print([button.name for button in data.buttons])
         self.interactable = data.interactable
         self.buttons = data.buttons
         
@@ -72,7 +72,7 @@ class FullViewWindow(QDockWidget):
         super().hide()
         
 class FullView3DInteractable(QWidget):
-    def __init__(self, view3dData:View3DData, parent=None):
+    def __init__(self, view3dData:Models.Gen2dResult, parent=None):
         super(FullView3DInteractable, self).__init__(parent)
         self.viewer = View3DWindow(view3dData)
         self.container = QWidget.createWindowContainer(self.viewer)

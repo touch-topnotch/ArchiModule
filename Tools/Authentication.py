@@ -1,8 +1,5 @@
 import FreeCADGui
 import FreeCAD
-# For FreeCAD macros, normally you already have a QApplication running,
-# so you often don't need to create another QApplication.
-# But for clarity, we include it here in case you're testing outside or as a snippet.
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QGraphicsBlurEffect
 from PySide2.QtWidgets import (QWidget, QLabel, QVBoxLayout, QLineEdit, QPushButton,
@@ -40,6 +37,12 @@ class AuthenticatedSession:
     def try_auto_auth(self):
         if not self.auto_login():
             self.show_login()
+    def get_token(self):
+        if(self.token is None):
+            complete = self.auto_login()
+            if not complete:
+                return None
+        return self.token
     
     
 

@@ -3,7 +3,8 @@ import json
 import os
 import FreeCAD
 from pydantic import BaseModel
-
+from Tools.Models import Gen3dSaved
+    
 
 class ProjectContextModel(BaseModel):
     prompt: str
@@ -11,10 +12,11 @@ class ProjectContextModel(BaseModel):
     slider_value: float
     sketches: List[str]
     generations2d: List[str]
-    generations3d: List[str]
+    generations3d: List[Gen3dSaved]
+    
 
 def get_project_path(proj_name = FreeCAD.ActiveDocument.Name):
-    project_path = f"{FreeCAD.getResourceDir()}/Mod/Archi/Resources/{proj_name}"
+    project_path = f"{FreeCAD.getResourceDir()}Mod/Archi/Resources/{proj_name}"
     if not os.path.exists(f"{project_path}"):
         os.makedirs(f"{project_path}")
     return project_path
@@ -45,16 +47,37 @@ def save_prop(key, value, proj_name = FreeCAD.ActiveDocument.Name):
     with open(f"{project_path}/ProjectContext.json", "w") as f:
         json.dump(project_context, f)
 
-def save_arr_item(key, value, proj_name = FreeCAD.ActiveDocument.Name,):
+def save_arr_item(key, value, proj_name = FreeCAD.ActiveDocument.Name):
     project_path = get_project_path(proj_name)
     with open(f"{project_path}/ProjectContext.json", "r") as f:
         project_context = json.load(f)
         if(key not in project_context):
             project_context[key] = []
+        if isinstance(value, BaseModel):
+            value = value.model_dump()
         if(value not in project_context[key]):
             project_context[key].append(value)      
     with open(f"{project_path}/ProjectContext.json", "w") as f:
         json.dump(project_context, f)
+    
+def remove_arr_item(key, value, proj_name = FreeCAD.ActiveDocument.Name):
+    project_path = get_project_path(proj_name)
+    with open(f"{project_path}/ProjectContext.json", "r") as f:
+        project_context = json.load(f)
+        if(key not in project_context):
+            return
+        if isinstance(value, BaseModel):
+            value = value.model_dump()
+        #value - path to file. Delete it
+        if(os.path.exists(value)):
+            os.remove(value)
+            
+        if(value in project_context[key]):
+            project_context[key].remove(value)  
+                
+    with open(f"{project_path}/ProjectContext.json", "w") as f:
+        json.dump(project_context, f)
+        
 
 def load(project_name=FreeCAD.ActiveDocument.Name):
     project_path = get_project_path(project_name)
