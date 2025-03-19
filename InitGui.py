@@ -1,4 +1,5 @@
 # filepath: /Users/dmitry057/Projects/DeepL/archi-ve/FreeCAD/src/Mod/Archi/InitGui.py
+
 import FreeCAD
 import FreeCADGui
 
@@ -46,13 +47,24 @@ class ArchiWorkbench(Workbench):
         import ArchiGui
 
         # import ProjectContext
-        import Authentication
-        import MasterAPI
+        import Tools.Authentication as Authentication
+        import Tools.MasterAPI as MasterAPI
+        import Tools.ProjectContext as ProjectContext
+        
+        if(FreeCAD.ActiveDocument == None):
+            return False
 
         masterAPI = MasterAPI.MasterAPI("http://89.169.36.93:8001")
+        auth_session_command = Authentication.Archi_Authentication_Command(masterAPI=masterAPI)
+        auth_session_command.Activated()
+        session = auth_session_command.session
+        project_context_command = ProjectContext.Archi_ProjectContext_Command(session)
+        project_context_command.Activated()
+        
         # FreeCADGui.addCommand("Archi_ProjectContext", ProjectContext.Archi_ProjectContext_Command())
         # FreeCADGui.addCommand("Archi_Sketch3d", Archi_Sketch3d_Command())
-        FreeCADGui.addCommand("Archi_Authentication", Authentication.Archi_Authentication_Command(masterAPI=masterAPI))
+        return True
+        
 
     def Activated(self):
         # Add commands to menu
@@ -69,4 +81,50 @@ class ArchiWorkbench(Workbench):
     def GetClassName(self):
         return "Gui::Workbench"
 
-Gui.addWorkbench(ArchiWorkbench())
+
+class DocumentObserver:
+    
+    def __init__(self, workbench):
+        self.workbench = workbench
+        self.singleton = False
+
+
+    def slotCreatedObject(self, Obj):
+        print("On created object called")
+
+    def slotDeletedObject(self, Obj):
+        print("On deleted object called")
+
+    def slotChangedObject(self, Obj, Prop):
+        if FreeCAD.ActiveDocument and FreeCAD.ActiveDocument.Name and not self.singleton:
+            print(f"Project selected: {FreeCAD.ActiveDocument.Name}")
+            self.workbench.Initialize()
+            self.singleton = True
+
+    def slotRelabelObject(self, Obj):
+        print("On relabel object called")
+
+    def slotActivatedObject(self, Obj):
+        print("On activated object called")
+
+    def slotEnterEditObject(self, Obj):
+        print("On enter edit object called")
+
+    def slotResetEditObject(self, Obj):
+        print("On reset edit object called")
+
+    def slotUndoDocument(self, Doc):
+        print("On undo document called")
+
+    def slotRedoDocument(self, Doc):
+        print("On redo document called")
+
+    def slotDeleteDocument(self, Doc):
+        print("On delete document called")
+
+archi_workbench = ArchiWorkbench()
+FreeCADGui.addWorkbench(archi_workbench)
+
+observer = DocumentObserver(archi_workbench)
+FreeCADGui.addDocumentObserver(observer)
+print("Archi workbench initialized")

@@ -1055,15 +1055,10 @@ class Archi_ProjectContext_Command:
         # find dock widgets with name Project Context
         dock_widgets = mw.findChildren(QDockWidget)
         for widget in dock_widgets:
-            if widget.windowTitle() == "Project Context":
+            if widget.windowTitle() in ["Project Context", "Best Sketch", "Full View", "Полный просмотр"]:
+                mw.removeDockWidget(widget
+                )
                 widget.close()
-            if widget.windowTitle() == "Best Sketch":
-                widget.close()
-            if widget.windowTitle() == "Full View":
-                widget.close()
-            if widget.windowTitle() == "Полный просмотр":
-                widget.close()
-            
 		
         projectContextWindowInstance = ArchiContextWindow(self.authenticatedSession,mw)
         mw.addDockWidget(Qt.RightDockWidgetArea, projectContextWindowInstance)
@@ -1072,16 +1067,7 @@ class Archi_ProjectContext_Command:
     def IsActive(self):
         return True
     
-mw = FreeCADGui.getMainWindow()
-# find dock widgets with name Project Context
-dock_widgets = mw.findChildren(QDockWidget)
-for widget in dock_widgets:
-    if widget.windowTitle() in ["Project Context", "Best Sketch", "Full View"]:
-        mw.removeDockWidget(widget
-        )
-        widget.close()
-
-authenticatedSession = AuthenticatedSession(masterAPI=MasterAPI("http://89.169.36.93:8001"))
-projectContextWindowInstance = ArchiContextWindow(authenticatedSession,mw)
-mw.addDockWidget(Qt.RightDockWidgetArea, projectContextWindowInstance)
-projectContextWindowInstance.show()
+# authenticatedSession = AuthenticatedSession(masterAPI=MasterAPI("http://89.169.36.93:8001"))
+# projectContextWindowInstance = ArchiContextWindow(authenticatedSession,mw)
+# mw.addDockWidget(Qt.RightDockWidgetArea, projectContextWindowInstance)
+# projectContextWindowInstance.show()

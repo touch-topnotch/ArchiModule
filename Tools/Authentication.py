@@ -197,10 +197,11 @@ class Archi_Authentication_Command:
                 if widget.windowTitle() == "Authentication":
                     widget.close()
             self.session = AuthenticatedSession(self.masterAPI)
-            self.authWindow = ArchiAuthenticationWindow(self.session)
+            self.authWindow = ArchiAuthenticationWindow(lambda: print("Logged In"), self.session)
             mw.addDockWidget(Qt.RightDockWidgetArea, self.authWindow)
             self.authWindow.setFloating(True)
-            self.authWindow.try_auto_auth()
+            # TODO: check if user is already logged in
+            # self.session.try_auto_auth
         else:
             self.authWindow.toggleWidgets(ArchiAuthenticationWindow.WidgetType.LOGIN)
             self.authWindow.show()
