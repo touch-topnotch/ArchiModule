@@ -22,7 +22,7 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-#include <boost/algorithm/string.hpp>
+// #include <boost/algorithm/string.hpp>
 #endif
 
 #include <Base/Exception.h>
@@ -82,7 +82,7 @@ int CommandPy::PyInit(PyObject* args, PyObject* kwd)
                                            &PyDict_Type,
                                            &parameters)) {
        std::string sname(name);
-       boost::to_upper(sname);
+       //boost::to_upper(sname);
        try {
            if (!sname.empty()) {
                getCommandPtr()->setFromGCode(name);
@@ -105,7 +105,7 @@ int CommandPy::PyInit(PyObject* args, PyObject* kwd)
                return -1;
            }
 
-           boost::to_upper(ckey);
+           //boost::to_upper(ckey);
            double cvalue;
            if (PyObject_TypeCheck(value, &(PyLong_Type))) {
                cvalue = (double)PyLong_AsLong(value);
@@ -132,7 +132,7 @@ int CommandPy::PyInit(PyObject* args, PyObject* kwd)
                                            &(Base::PlacementPy::Type),
                                            &parameters)) {
        std::string sname(name);
-       boost::to_upper(sname);
+       //boost::to_upper(sname);
        try {
            if (!sname.empty()) {
                getCommandPtr()->setFromGCode(name);
@@ -159,7 +159,7 @@ Py::String CommandPy::getName() const
 void CommandPy::setName(Py::String arg)
 {
    std::string cmd = arg.as_std_string();
-   boost::to_upper(cmd);
+   //boost::to_upper(cmd);
    getCommandPtr()->Name = cmd;
 }
 
@@ -192,7 +192,7 @@ void CommandPy::setParameters(Py::Dict arg)
            throw Py::TypeError("The dictionary can only contain string keys");
        }
 
-       boost::to_upper(ckey);
+       //boost::to_upper(ckey);
        double cvalue;
        if (PyObject_TypeCheck(value, &(PyLong_Type))) {
            cvalue = (double)PyLong_AsLong(value);
@@ -280,7 +280,7 @@ PyObject* CommandPy::getCustomAttributes(const char* attr) const
    std::string satt(attr);
    if (satt.length() == 1) {
        if (isalpha(satt[0])) {
-           boost::to_upper(satt);
+           //boost::to_upper(satt);
            if (getCommandPtr()->Parameters.count(satt)) {
                return PyFloat_FromDouble(getCommandPtr()->Parameters[satt]);
            }
@@ -296,7 +296,7 @@ int CommandPy::setCustomAttributes(const char* attr, PyObject* obj)
    std::string satt(attr);
    if (satt.length() == 1) {
        if (isalpha(satt[0])) {
-           boost::to_upper(satt);
+           //boost::to_upper(satt);
            double cvalue;
            if (PyObject_TypeCheck(obj, &(PyLong_Type))) {
                cvalue = (double)PyLong_AsLong(obj);

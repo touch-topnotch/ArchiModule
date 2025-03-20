@@ -24,7 +24,7 @@
 #ifndef _PreComp_
 #include <cinttypes>
 #include <iomanip>
-#include <boost/algorithm/string.hpp>
+// #include <boost/algorithm/string.hpp>
 #endif
 
 #include <Base/Exception.h>
@@ -83,14 +83,14 @@ Vector3d Command::getCenter() const
 double Command::getValue(const std::string& attr) const
 {
    std::string a(attr);
-   boost::to_upper(a);
+   //boost::to_upper(a);
    return getParam(a);
 }
 
 bool Command::has(const std::string& attr) const
 {
    std::string a(attr);
-   boost::to_upper(a);
+   //boost::to_upper(a);
    return Parameters.count(a) > 0;
 }
 
@@ -155,7 +155,7 @@ void Command::setFromGCode(const std::string& str)
            if (mode == "command") {
                if (!key.empty() && !value.empty()) {
                    std::string cmd = key + value;
-                   boost::to_upper(cmd);
+                   //boost::to_upper(cmd);
                    Name = cmd;
                    key = "";
                    value = "";
@@ -172,7 +172,7 @@ void Command::setFromGCode(const std::string& str)
            else if (mode == "argument") {
                if (!key.empty() && !value.empty()) {
                    double val = std::atof(value.c_str());
-                   boost::to_upper(key);
+                   //boost::to_upper(key);
                    Parameters[key] = val;
                    key = "";
                    value = "";
@@ -204,13 +204,13 @@ void Command::setFromGCode(const std::string& str)
        if ((mode == "command") || (mode == "comment")) {
            std::string cmd = key + value;
            if (mode == "command") {
-               boost::to_upper(cmd);
+               //boost::to_upper(cmd);
            }
            Name = cmd;
        }
        else {
            double val = std::atof(value.c_str());
-           boost::to_upper(key);
+           //boost::to_upper(key);
            Parameters[key] = val;
        }
    }

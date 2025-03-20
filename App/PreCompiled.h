@@ -34,19 +34,4 @@
 #define MeshExport
 #endif
 
-#ifdef _PreComp_
-
-// STL
-#include <memory>
-#include <sstream>
-
-// kdl_cp
-
-// OCC
-#include <BRepAdaptor_Curve.hxx>
-#include <CPnts_AbscissaPoint.hxx>
-#include <TopoDS.hxx>
-#include <TopoDS_Edge.hxx>
-
-#endif  // _PreComp_
 #endif
