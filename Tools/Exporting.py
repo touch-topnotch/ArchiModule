@@ -31,6 +31,8 @@ def rename_project(new_name, old_name = recall_proj_name):
     '''
     old_path = get_project_path(old_name)
     new_path = get_project_path(new_name)
+    if(os.path.exists(new_path)):
+        return new_path
     os.rename(old_path, new_path)
     with open(f"{new_path}/ProjectContext.json", "r") as f:
         data = f.read()
