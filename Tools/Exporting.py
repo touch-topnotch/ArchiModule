@@ -14,13 +14,31 @@ class ProjectContextModel(BaseModel):
     generations2d: List[str]
     generations3d: List[Gen3dSaved]
     
-
+recall_proj_name = "None"
 def get_project_path(proj_name = FreeCAD.ActiveDocument.Name):
     project_path = f"{FreeCAD.getResourceDir()}Mod/Archi/Resources/{proj_name}"
+    global recall_proj_name
+    recall_proj_name = proj_name
     if not os.path.exists(f"{project_path}"):
         os.makedirs(f"{project_path}")
     return project_path
-
+def rename_project(new_name, old_name = recall_proj_name):
+    '''
+    1. Create new folder with new_name
+    2. Copy all files from old folder to new folder
+    3. Delete old folder
+    4. Update ProjectContext.json
+    '''
+    old_path = get_project_path(old_name)
+    new_path = get_project_path(new_name)
+    os.rename(old_path, new_path)
+    with open(f"{new_path}/ProjectContext.json", "r") as f:
+        data = f.read()
+        if old_name in data:
+            data = data.replace(old_name, new_name)
+    with open(f"{new_path}/ProjectContext.json", "w") as fw:
+        fw.write(data)
+    return new_path
 def save_source(folder, path, proj_name = FreeCAD.ActiveDocument.Name):
     project_path = get_project_path(proj_name)
     if(not os.path.exists(f"{project_path}/{folder}")):

@@ -78,49 +78,116 @@ class ArchiWorkbench(Workbench):
     def Deactivated(self):
         pass
 
-    def GetClassName(self):
-        return "Gui::Workbench"
+    # def GetClassName(self):
+    #     return "Gui::Workbench"
 
-
+import Tools.Exporting as Exporting
 class DocumentObserver:
     
     def __init__(self, workbench):
         self.workbench = workbench
         self.singleton = False
 
+    def slotCreatedDocument(self, Doc):
+        print("On slotCreatedDocument called")
 
-    def slotCreatedObject(self, Obj):
-        print("On created object called")
+    def slotDeletedDocument(self, Doc):
+        print("On slotDeletedDocument called")
 
-    def slotDeletedObject(self, Obj):
-        print("On deleted object called")
+    def slotRelabelDocument(self, Doc):
+        # rename folder by Tools.Exporting.RenameFolder()
+        Exporting.rename_project(Doc.Name)
+        print("On slotRelabelDocument called")
 
-    def slotChangedObject(self, Obj, Prop):
+    def slotActivateDocument(self, Doc):
         if FreeCAD.ActiveDocument and FreeCAD.ActiveDocument.Name and not self.singleton:
             print(f"Project selected: {FreeCAD.ActiveDocument.Name}")
             self.workbench.Initialize()
             self.singleton = True
 
-    def slotRelabelObject(self, Obj):
-        print("On relabel object called")
 
-    def slotActivatedObject(self, Obj):
-        print("On activated object called")
+    def slotBeforeChangeDocument(self, Obj, Prop):
+        print("On slotBeforeChangeDocument called")
 
-    def slotEnterEditObject(self, Obj):
-        print("On enter edit object called")
+    def slotChangedDocument(self, Obj, Prop):
+        print("On slotChangedDocument called")
 
-    def slotResetEditObject(self, Obj):
-        print("On reset edit object called")
+    # def slotCreatedObject(self, Obj):
+    #     print("On slotCreatedObject called")
+
+    def slotDeletedObject(self, Obj):
+        print("On slotDeletedObject called")
+
+    # def slotBeforeChangeObject(self, Obj, Prop):
+    #     print("On slotBeforeChangeObject called")
+
+    # def slotChangedObject(self, Obj, Prop):
+    #     print("On slotChangedObject called")
 
     def slotUndoDocument(self, Doc):
-        print("On undo document called")
+        print("On slotUndoDocument called")
 
     def slotRedoDocument(self, Doc):
-        print("On redo document called")
+        print("On slotRedoDocument called")
 
-    def slotDeleteDocument(self, Doc):
-        print("On delete document called")
+    def slotRecomputedObject(self, Obj):
+        print("On slotRecomputedObject called")
+
+    def slotBeforeRecomputeDocument(self, Doc):
+        print("On slotBeforeRecomputeDocument called")
+
+    def slotRecomputedDocument(self, Doc):
+        print("On slotRecomputedDocument called")
+
+    def slotOpenTransaction(self, Doc, transactionName):
+        print("On slotOpenTransaction called")
+
+    def slotCommitTransaction(self, Doc):
+        print("On slotCommitTransaction called")
+
+    def slotAbortTransaction(self, Doc):
+        print("On slotAbortTransaction called")
+
+    def slotUndo(self):
+        print("On slotUndo called")
+
+    def slotRedo(self):
+        print("On slotRedo called")
+
+    def slotBeforeCloseTransaction(self, abort):
+        print("On slotBeforeCloseTransaction called")
+
+    def slotCloseTransaction(self, abort):
+        print("On slotCloseTransaction called")
+
+    # def slotAppendDynamicProperty(self, Prop):
+    #     print("On slotAppendDynamicProperty called")
+
+    # def slotRemoveDynamicProperty(self, Prop):
+    #     print("On slotRemoveDynamicProperty called")
+
+    # def slotChangePropertyEditor(self, Doc, Prop):
+    #     print("On slotChangePropertyEditor called")
+
+    def slotStartSaveDocument(self, Doc, filename):
+        print("On slotStartSaveDocument called")
+
+    def slotFinishSaveDocument(self, Doc, filename):
+        print("On slotFinishSaveDocument called")
+
+    # def slotBeforeAddingDynamicExtension(self, extensionContainer, extension):
+    #     print("On slotBeforeAddingDynamicExtension called")
+
+    # def slotAddedDynamicExtension(self, extensionContainer, extension):
+    #     print("On slotAddedDynamicExtension called")
+    # def slotChangedObject(self, Obj, Prop):
+        # if FreeCAD.ActiveDocument and FreeCAD.ActiveDocument.Name and not self.singleton:
+        #     print(f"Project selected: {FreeCAD.ActiveDocument.Name}")
+        #     self.workbench.Initialize()
+        #     self.singleton = True
+        # print("On changed object called")
+
+
 
 archi_workbench = ArchiWorkbench()
 FreeCADGui.addWorkbench(archi_workbench)
