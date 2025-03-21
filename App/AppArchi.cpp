@@ -3,7 +3,7 @@
 //
 
 
-#include "PreCompiled.h"
+//#include "PreCompiled.h"
 #include "Base/PyObjectBase.h"
 
 #include <Base/Console.h>
@@ -19,14 +19,6 @@ public:
         : Py::ExtensionModule<Module>("Archi")
     {
         initialize("This module is Archi module.");  // register with Python
-    }
-
-private:
-    Py::Object simulateToFile(const Py::Tuple& args)
-    {
-       
-        
-        return Py::Float(0.0);
     }
 };
 

@@ -21,14 +21,14 @@ set(Archi_LIBS
 generate_from_xml(CommandPy)
 
 SET(Python_SRCS
-    CommandPy.xml
-    CommandPyImp.cpp
+#    CommandPy.xml
+#    CommandPyImp.cpp
 )
 
 SET(Mod_SRCS
         AppArchi.cpp
-        PreCompiled.cpp
-        PreCompiled.h
+#        PreCompiled.cpp
+#        PreCompiled.h
 )
 
 if(FREECAD_USE_PCH)
@@ -38,8 +38,8 @@ if(FREECAD_USE_PCH)
 endif(FREECAD_USE_PCH)
 
 SET(Archi_SRCS
-    Command.cpp
-    Command.h
+#    Command.cpp
+#    Command.h
     ${Mod_SRCS}
     ${Python_SRCS}
 )
