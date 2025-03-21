@@ -1,11 +1,11 @@
 import FreeCADGui
 import FreeCAD
-from PySide2.QtCore import Qt, QObject, Signal, QEvent
-from PySide2.QtGui import QPixmap, QPainter, QPainterPath, QWheelEvent
-from PySide2.QtWidgets import QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDialog, QPushButton, QHBoxLayout, QDockWidget
-from PySide2.QtSvg import QSvgWidget
-from PySide2.QtCore import QTimer, QPoint
-from PySide2.QtCore import Qt
+from PySide.QtCore import Qt, QObject, Signal, QEvent
+from PySide.QtGui import QPixmap, QPainter, QPainterPath, QWheelEvent
+from PySide.QtWidgets import QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDialog, QPushButton, QHBoxLayout, QDockWidget
+from PySide.QtSvg import QSvgWidget
+from PySide.QtCore import QTimer, QPoint
+from PySide.QtCore import Qt
 from Tools.View3d import View3DWindow
 from Tools import Exporting
 from typing import List, Dict

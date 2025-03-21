@@ -1,9 +1,9 @@
-from PySide2.Qt3DCore import (Qt3DCore)
-from PySide2.Qt3DExtras import (Qt3DExtras)
-from PySide2.Qt3DRender import (Qt3DRender)
-from PySide2.QtCore import (Property, QObject, QPropertyAnimation, Signal, QUrl)
-from PySide2.QtGui import (QMatrix4x4)
-from PySide2.QtGui import QVector3D, QColor
+from PySide.Qt3DCore import (Qt3DCore)
+from PySide.Qt3DExtras import (Qt3DExtras)
+from PySide.Qt3DRender import (Qt3DRender)
+from PySide.QtCore import (Property, QObject, QPropertyAnimation, Signal, QUrl)
+from PySide.QtGui import (QMatrix4x4)
+from PySide.QtGui import QVector3D, QColor
 from pydantic import BaseModel, ConfigDict
 from Tools import Models
 
@@ -86,7 +86,7 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         self.frameGraph = self.activeFrameGraph()
 
         self.frameGraph.setClearColor(self.view_3d_style.background_color)
-        self.create_scene(data)
+        self.create_scene(self.data)
         
     def create_scene(self, data: Models.Gen3dResult):
         # Create Root Entity

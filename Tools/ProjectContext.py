@@ -7,13 +7,13 @@ from typing import List, Optional, Tuple
 import FreeCAD
 import FreeCADGui
 
-from PySide2.QtGui import QPixmap, QImage, QIcon, QPainter, QPen, QBrush, QColor, QVector3D
-from PySide2.QtCore import Qt, QTimer
-from PySide2.QtWidgets import (QWidget, QLabel, QVBoxLayout, 
+from PySide.QtGui import QPixmap, QImage, QIcon, QPainter, QPen, QBrush, QColor, QVector3D
+from PySide.QtCore import Qt, QTimer
+from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, 
                                QSlider, QLineEdit, QPushButton, QRadioButton,
                                QGroupBox, QFormLayout, QScrollArea, QDockWidget, QHBoxLayout, QVBoxLayout,
                                 QMessageBox,QGraphicsOpacityEffect, QGraphicsBlurEffect, QFileDialog, QFormLayout, QStackedLayout, QGraphicsScene, QGraphicsPixmapItem, QGraphicsBlurEffect)
-from PySide2.QtSvg import QSvgWidget
+from PySide.QtSvg import QSvgWidget
 from Tools.View3d import View3DStyle
 from Tools.Authentication import AuthenticatedSession
 from Tools.MasterAPI import MasterAPI
@@ -23,15 +23,15 @@ from Tools.GalleryUtils import (ImageCell,View3DCell, AnimatedCell, LoadingCell,
 from Tools.FullView import (FullViewWindow, FullViewImageInteractable,FullView3DInteractable,
                                 FullViewButtonData,  FullViewWindowData)
 from Tools import Exporting
-from PySide2.QtWidgets import QLabel, QVBoxLayout, QStackedLayout
-from PySide2.QtWidgets import QLabel
-from PySide2.QtCore import Signal, QPoint, Qt, QSize
-from PySide2.QtGui import QPixmap, QMouseEvent
+from PySide.QtWidgets import QLabel, QVBoxLayout, QStackedLayout
+from PySide.QtWidgets import QLabel
+from PySide.QtCore import Signal, QPoint, Qt, QSize
+from PySide.QtGui import QPixmap, QMouseEvent
 import numpy as np
 import Archi
 import ArchiGui
 from enum import Enum, auto
-from PySide2.QtCore import QByteArray, QBuffer
+from PySide.QtCore import QByteArray, QBuffer
 import requests
 import asyncio
 

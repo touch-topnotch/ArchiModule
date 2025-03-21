@@ -101,3 +101,25 @@ INSTALL(FILES ${ArchiGuiIcon_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Arch
 INSTALL(FILES ${ArchiGuiAnims_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/anims")
 INSTALL(FILES ${ArchiGenerations3d_GLTF} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/generations3d")
 INSTALL(FILES ${AtchiPanels_UI} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/panels")
+
+set(PythonExtModules_Archi
+        pydantic
+        Pillow
+        requests
+        keyring
+)
+
+if(PYTHON_EXECUTABLE)
+        foreach(module ${PythonExtModules_Archi})
+                message(STATUS "Installing Python module: ${module}")
+                execute_process(
+                        COMMAND ${PYTHON_EXECUTABLE} -m pip install ${module}
+                        RESULT_VARIABLE pip_install_result
+                        OUTPUT_VARIABLE pip_install_output
+                        ERROR_VARIABLE pip_install_error
+                )
+                if(NOT pip_install_result EQUAL 0)
+                        message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
+                endif()
+        endforeach()
+endif()

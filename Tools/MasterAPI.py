@@ -11,7 +11,7 @@ import asyncio
 from Models import Gen2dInput, Gen2dResult, Gen3dInput, Gen3dId, Gen3dResult, Token, RemoveBackgroundInput, ClearBackgroundInput
 import threading
 from typing import Callable, Any, Optional
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide.QtCore import QObject, Signal, Slot
 import ConvertPNG
 
 class AsyncWorker(QObject):

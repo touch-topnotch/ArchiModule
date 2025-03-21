@@ -3,13 +3,13 @@ import FreeCAD
 # For FreeCAD macros, normally you already have a QApplication running,
 # so you often don't need to create another QApplication. 
 # But for clarity, we include it here in case you're testing outside or as a snippet.
-from PySide2.QtCore import Qt,  QTimer,  QThread, QMetaObject, Slot
-from PySide2.QtGui import (QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
+from PySide.QtCore import Qt,  QTimer,  QThread, QMetaObject, Slot
+from PySide.QtGui import (QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
                           QPushButton, QSlider, QLineEdit, QDoubleSpinBox,
                           QGroupBox, QFormLayout, QScrollArea, QApplication, QDockWidget,
                           QFileDialog, QPixmap, QPainter, QPainterPath, QGridLayout,
                           QSizePolicy)
-from PySide2 import QtCore
+from PySide import QtCore
 from pivy.coin import SoSeparator
 from pivy.coin import SoCube, SoTranslation, SoRenderManager, SoDB, SoInput
 from pivy.quarter import QuarterWidget
