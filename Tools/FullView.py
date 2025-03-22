@@ -2,7 +2,7 @@ import FreeCADGui
 from PySide.QtCore import Qt, QObject, Signal, QEvent
 from PySide.QtGui import QPixmap, QPainter, QPainterPath, QWheelEvent
 from PySide.QtWidgets import QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDialog, QPushButton, QHBoxLayout, QDockWidget
-from PySide.QtSvg import QSvgWidget
+
 from PySide.QtCore import QTimer, QPoint
 from PySide.QtCore import Qt
 from Tools.View3d import View3DWindow

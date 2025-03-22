@@ -13,7 +13,7 @@ from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout,
                                QSlider, QLineEdit, QPushButton, QRadioButton,
                                QGroupBox, QFormLayout, QScrollArea, QDockWidget, QHBoxLayout, QVBoxLayout,
                                 QMessageBox,QGraphicsOpacityEffect, QGraphicsBlurEffect, QFileDialog, QFormLayout, QStackedLayout, QGraphicsScene, QGraphicsPixmapItem, QGraphicsBlurEffect)
-from PySide.QtSvg import QSvgWidget
+
 from Tools.View3d import View3DStyle
 from Tools.Authentication import AuthenticatedSession
 from Tools.MasterAPI import MasterAPI
