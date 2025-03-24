@@ -10,9 +10,9 @@ import FreeCADGui
 from PySide.QtGui import QPixmap, QImage, QIcon, QPainter, QPen, QBrush, QColor, QVector3D
 from PySide.QtCore import Qt, QTimer
 from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, 
-                               QSlider, QLineEdit, QPushButton, QRadioButton,
+                               QSlider, QLineEdit, QPlainTextEdit, QPushButton, QRadioButton,
                                QGroupBox, QFormLayout, QScrollArea, QDockWidget, QHBoxLayout, QVBoxLayout,
-                                QMessageBox,QGraphicsOpacityEffect, QGraphicsBlurEffect, QFileDialog, QFormLayout, QStackedLayout, QGraphicsScene, QGraphicsPixmapItem, QGraphicsBlurEffect)
+                               QMessageBox, QGraphicsOpacityEffect, QGraphicsBlurEffect, QFileDialog, QFormLayout, QStackedLayout, QGraphicsScene, QGraphicsPixmapItem, QGraphicsBlurEffect)
 
 from Tools.View3d import View3DStyle
 from Tools.Authentication import AuthenticatedSession
@@ -34,6 +34,7 @@ from enum import Enum, auto
 from PySide.QtCore import QByteArray, QBuffer
 import requests
 import asyncio
+
 
 class MyRadioButton(QRadioButton):
             def __init__(self, parent=None):
@@ -193,7 +194,7 @@ class PrepareFor3dGen(PrepareWindow):
         self.formLayout.addRow(self.gallery)
         prompt_label = QLabel("Контекст проекта")
         self.formLayout.addRow(prompt_label)
-        self.prompt_edit = QLineEdit()
+        self.prompt_edit = QPlainTextEdit()
         self.prompt_edit.setMinimumHeight(80)
         self.prompt_edit.setAlignment(Qt.AlignTop)
         self.prompt_edit.setText(self.model.prompt)

@@ -190,7 +190,10 @@ class GalleryWidget(QWidget):
         if self.galleryStyle.styleSheet:
             scroll_area.setStyleSheet(self.galleryStyle.styleSheet)
         else:
-            scroll_area.setStyleSheet(f"background-color: {self.palette().color(self.backgroundRole()).name()};")
+            parent_widget = self.parent() if self.parent() is not None else self
+            # scroll_area.setStyleSheet(f"background-color: {parent_widget.palette().color(parent_widget.backgroundRole()).name()};")
+            scroll_area.setStyleSheet(f"background-color: #222222;");
+
 
 
         self.heights = [0] * self.galleryStyle.number_of_cols

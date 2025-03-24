@@ -8,11 +8,11 @@ this script is responsible for testing the authentication of the user.
 import requests
 import keyring
 import asyncio
-from Models import Gen2dInput, Gen2dResult, Gen3dInput, Gen3dId, Gen3dResult, Token, RemoveBackgroundInput, ClearBackgroundInput
+from Tools.Models import Gen2dInput, Gen2dResult, Gen3dInput, Gen3dId, Gen3dResult, Token, RemoveBackgroundInput, ClearBackgroundInput
 import threading
 from typing import Callable, Any, Optional
 from PySide.QtCore import QObject, Signal, Slot
-import ConvertPNG
+from Tools import ConvertPNG
 
 class AsyncWorker(QObject):
     result_ready = Signal(object, object)  # (result, error)
