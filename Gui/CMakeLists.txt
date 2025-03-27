@@ -108,8 +108,17 @@ set(PythonExtModules_Archi
         requests
         keyring
 )
-
 if(PYTHON_EXECUTABLE)
+        message(STATUS "Installing Python module: ${module}")
+        execute_process(
+                COMMAND ${PYTHON_EXECUTABLE} -m pip install --upgrade pip
+                RESULT_VARIABLE pip_install_result
+                OUTPUT_VARIABLE pip_install_output
+                ERROR_VARIABLE pip_install_error
+        )
+        if(NOT pip_install_result EQUAL 0)
+                message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
+        endif()
         foreach(module ${PythonExtModules_Archi})
                 message(STATUS "Installing Python module: ${module}")
                 execute_process(
@@ -122,6 +131,51 @@ if(PYTHON_EXECUTABLE)
                         message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
                 endif()
         endforeach()
+
+          message(STATUS "Checking PySide6 version...")
+
+        # Get the installed PySide6 version
+        execute_process(
+                COMMAND ${PYTHON_EXECUTABLE} -c "import PySide6; print(PySide6.__version__)"
+                OUTPUT_VARIABLE PYSIDE6_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_VARIABLE PYSIDE6_VERSION_ERROR
+        )
+
+
+        if(PYSIDE6_VERSION)
+                message(STATUS "Detected PySide6 version: ${PYSIDE6_VERSION}")
+
+                # Upgrade pip (optional but recommended)
+                execute_process(
+                COMMAND ${PYTHON_EXECUTABLE} -m pip install --upgrade pip
+                        RESULT_VARIABLE pip_upgrade_result
+                        OUTPUT_VARIABLE pip_upgrade_output
+                        ERROR_VARIABLE pip_upgrade_error
+                )
+                if(NOT pip_upgrade_result EQUAL 0)
+                        message(WARNING "pip upgrade failed: ${pip_upgrade_error}")
+                endif()
+
+                # List of modules to install at the detected version
+                set(PythonExtModules_Archi
+                        "PySide6-Addons==${PYSIDE6_VERSION}"
+                )
+
+                foreach(module ${PythonExtModules_Archi})
+                message(STATUS "Installing Python module: ${module}")
+                execute_process(
+                        COMMAND ${PYTHON_EXECUTABLE} -m pip install --no-cache-dir ${module}
+                        RESULT_VARIABLE pip_install_result
+                        OUTPUT_VARIABLE pip_install_output
+                        ERROR_VARIABLE pip_install_error
+                )
+                if(NOT pip_install_result EQUAL 0)
+                        message(FATAL_ERROR "Failed to install ${module}:\n${pip_install_error}")
+                endif()
+                endforeach()
+        endif()
+
 endif()
 
 file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DCore.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DCore import *\n")
