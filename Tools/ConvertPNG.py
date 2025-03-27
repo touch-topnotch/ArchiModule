@@ -18,31 +18,31 @@ def convert_png(source_path, dest_path=None, keep_alpha=True):
     :param keep_alpha:  Whether to keep alpha channel (RGBA) or strip it to RGB
     """)
     
-    # if not dest_path:
-    #     root = os.path.splitext(source_path)[0]
-    #     dest_path = f"{root}_converted.png"
+    if not dest_path:
+        root = os.path.splitext(source_path)[0]
+        dest_path = f"{root}_converted.png"
 
-    # # 1) Load the source image
-    # img = Image.open(source_path)
+    # 1) Load the source image
+    img = Image.open(source_path)
 
-    # # 2) Convert to RGB or RGBA (8 bits per channel)
-    # if keep_alpha and "A" in img.getbands():
-    #     # Convert to RGBA if original had an alpha channel
-    #     img = img.convert("RGBA")
-    # else:
-    #     # Otherwise use plain RGB
-    #     img = img.convert("RGB")
+    # 2) Convert to RGB or RGBA (8 bits per channel)
+    if keep_alpha and "A" in img.getbands():
+        # Convert to RGBA if original had an alpha channel
+        img = img.convert("RGBA")
+    else:
+        # Otherwise use plain RGB
+        img = img.convert("RGB")
 
-    # # 3) Remove ICC profile or other extra info if present
-    # if "icc_profile" in img.info:
-    #     # Copy info except the ICC profile
-    #     info = {k: v for k, v in img.info.items() if k != "icc_profile"}
-    #     img.info = info
+    # 3) Remove ICC profile or other extra info if present
+    if "icc_profile" in img.info:
+        # Copy info except the ICC profile
+        info = {k: v for k, v in img.info.items() if k != "icc_profile"}
+        img.info = info
 
-    # # 4) Save the image in standard PNG format
-    # img.save(dest_path, format="PNG")
+    # 4) Save the image in standard PNG format
+    img.save(dest_path, format="PNG")
 
-    # print(f"[OK] Converted: {source_path} -> {dest_path}")
+    print(f"[OK] Converted: {source_path} -> {dest_path}")
 
 
 

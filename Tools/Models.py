@@ -46,7 +46,7 @@ class Gen3dSaved(BaseModel):
 
 class RemoveBackgroundInput(BaseModel):
     image_base64: str
-    remove_coords: List[Tuple[int, int]]
-    keep_coords: Optional[List[Tuple[int, int]]] = None
+    keep_coords: List[Tuple[int, int]]
+    remove_coords: List[Tuple[int, int]] = None
 class ClearBackgroundInput(BaseModel):
     image_base64: str

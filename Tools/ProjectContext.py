@@ -378,7 +378,7 @@ class PrepareFor3dGen(PrepareWindow):
         self.messWait.setStandardButtons(QMessageBox.NoButton)
         self.messWait.setWindowModality(Qt.ApplicationModal)
         self.messWait.show()
-        self.auth_session.masterAPI.run_async_task(self.auth_session.masterAPI.remove_background, self.on_background_removed, token=token, removeBackgroundInput=rb_input)
+        self.auth_session.masterAPI.run_async_task(self.auth_session.masterAPI.remove_background_pipeline, self.on_background_removed, token=token, removeBackgroundInput=rb_input)
         
     def undo_remove_background(self):
         if(len(self.paths_stack) == 1):
@@ -412,12 +412,17 @@ class PrepareFor3dGen(PrepareWindow):
            
         self.paths_stack.append(path)
         self.setPixmap(QPixmap(path))
-  
-        rb_input = Models.ClearBackgroundInput(
-            image_base64=image_base64)
+        self.messWait.accept()
+        # rb_input = Models.ClearBackgroundInput(
+        #     image_base64=image_base64)
        
-        self.auth_session.masterAPI.run_async_task(self.auth_session.masterAPI.clear_background, self.on_background_cleared, token=token, clearBackgroundInput=rb_input)
+        #   self.auth_session.masterAPI.run_async_task(self.auth_session.masterAPI.clear_background, self.on_background_cleared, token=token, clearBackgroundInput=rb_input)
         
+        if(len(self.paths_stack) > 1):
+            self.undo_button.show()
+        else:
+            self.undo_button.hide()
+            
     def on_background_cleared(self, result: Optional[str], error: Optional[Exception]):
 
         if error:
@@ -795,7 +800,7 @@ class Generate2dBehaviour(ProjectBehaviour):
         
         if error:
             # show error message in box
-            QMessageBox.warning(self, "Ошибка", "Ошибка при генерации изображения: " + str(error))
+            QMessageBox.warning(FreeCADGui.getMainWindow(), "Ошибка", "Ошибка при генерации изображения: " + str(error), QMessageBox.Ok)
             # remove loading image from gallery
             self.gen2d.remove(self.gen_stack.pop())
             return
@@ -922,7 +927,7 @@ class ArchiContextWindow(QDockWidget):
         self.sketches = GalleryWidget(side_gallery_style)
         self.sk_button = QPushButton("Добавить")
         self.sk_button.clicked.connect(
-            lambda: self.sketches.select_and_add_images("sketches", lambda cell:self.full_view.show(FullViewImageInteractable(cell.image_path))) )
+            lambda: self.sketches.select_and_add_images("sketches", lambda cell: self.full_view.show(FullViewImageInteractable(cell.image_path)) if cell else None) )
         
      
         sketch_layout.addWidget(self.sketches)

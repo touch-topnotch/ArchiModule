@@ -123,3 +123,8 @@ if(PYTHON_EXECUTABLE)
                 endif()
         endforeach()
 endif()
+
+file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DCore.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DCore import *\n")
+file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DExtras.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DExtras import *\n")
+file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DRender.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DRender import *\n")
+file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/QtPrintSupport.py "from PySide${PYSIDE_MAJOR_VERSION}.QtPrintSupport import *\n")

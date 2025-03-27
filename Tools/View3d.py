@@ -86,7 +86,7 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
 
         self.frameGraph.setClearColor(self.view_3d_style.background_color)
         self.create_scene(self.data)
-        
+         
     def create_scene(self, data: Models.Gen3dResult):
         # Create Root Entity
         self.rootEntity = Qt3DCore.QEntity()
@@ -127,47 +127,37 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         self.objTransform = Qt3DCore.QTransform()
         self.objTransform.setScale3D(QVector3D(self.view_3d_style.model_scale, self.view_3d_style.model_scale, self.view_3d_style.model_scale))  # Adjust the scale if needed
         self.objTransform.setTranslation(self.view_3d_style.model_position)  # Adjust the position if needed
+    
+        # Material
+        self.objMaterial = Qt3DExtras.QDiffuseSpecularMapMaterial(self.rootEntity)
 
-  
+        # Diffuse texture (base color)
+        diffuse = Qt3DRender.QTextureLoader(self.objMaterial)
+        diffuse.setSource(QUrl.fromLocalFile(self.data.texture.base_color_url))
+        specular = Qt3DRender.QTextureLoader(self.objMaterial)
+        specular.setSource(QUrl.fromLocalFile(self.data.texture.roughness_url))
+        self.objMaterial.setDiffuse(diffuse)
+        self.objMaterial.setSpecular(specular)
+        # Shininess (scalar value)
+        self.objMaterial.setShininess(0.0)  # 0 = dull, 128 = very shiny
 
-        self.objMaterial = Qt3DExtras.QDiffuseSpecularMaterial(self.rootEntity)
-        self.objMaterial.setDiffuse(QVector3D(1.0,  1, 1))  # Orange color (change as needed)
-        self.objMaterial.setShininess(1)  # Adjust shininess as needed
-        self.objMaterial.setSpecular(QVector3D(0.9, 0.9, 0.9))  # Adjust specular as needed
+        # # Load and set the normal texture
+        # normal_texture = Qt3DRender.QTextureLoader(self.objMaterial)
+        # normal_texture.setSource(QUrl.fromLocalFile(self.data.texture.normal_url))
+        # self.objMaterial.setNormal(normal_texture)
+
+        # # Load and set the roughness texture
+        # roughness_texture = Qt3DRender.QTextureLoader(self.objMaterial)
+        # roughness_texture.setSource(QUrl.fromLocalFile(self.data.texture.roughness_url))
+        # self.objMaterial.setRoughness(roughness_texture)
+
+        # # Load and set the metallic texture
+        # metallic_texture = Qt3DRender.QTextureLoader(self.objMaterial)
+        # metallic_texture.setSource(QUrl.fromLocalFile(self.data.texture.metallic_url))
+        # self.objMaterial.setMetalness(metallic_texture)
         
 
         
-        # ✅ Load Texture (if .mat file contains a texture)
-        self.alphaTexture = Qt3DRender.QTexture2D()
-        self.alphaTextureImage = Qt3DRender.QTextureImage()
-        self.alphaTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.base_color_url))  # ✅ Replace with actual texture path
-        # self.alphaTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
-        self.alphaTexture.addTextureImage(self.alphaTextureImage)
-        self.objMaterial.setDiffuse(self.alphaTexture)
-        self.objMaterial.setShininess(0.0)
-
-
-        # self.normalTexture = Qt3DRender.QTexture2D()
-        # self.normalTextureImage = Qt3DRender.QTextureImage()
-        # self.normalTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.normal_url))  # ✅ Replace with actual texture path
-        # self.normalTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
-        # self.normalTexture.addTextureImage(self.normalTextureImage)
-        # self.objMaterial.setNormal(self.normalTexture)
-        
-        # self.roughnessTexture = Qt3DRender.QTexture2D()
-        # self.roughnessTextureImage = Qt3DRender.QTextureImage()
-        # self.roughnessTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.roughness_url))  # ✅ Replace with actual texture path
-        # self.roughnessTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
-        # self.roughnessTexture.addTextureImage(self.roughnessTextureImage)
-        # self.objMaterial.setRoughness(self.roughnessTexture)
-        
-        # self.metallicTexture = Qt3DRender.QTexture2D()
-        # self.metallicTextureImage = Qt3DRender.QTextureImage()
-        # self.metallicTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.metallic_url))  # ✅ Replace with actual texture path
-        # self.metallicTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
-        # self.metallicTexture.addTextureImage(self.metallicTextureImage)
-        # self.objMaterial.setMetallic(self.metallicTexture)
-
         # Attach components to entity
         self.objEntity.addComponent(self.objMesh)
         self.objEntity.addComponent(self.objMaterial)

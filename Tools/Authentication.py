@@ -1,5 +1,6 @@
 import FreeCADGui
 import FreeCAD
+
 from PySide.QtCore import Qt
 from PySide.QtWidgets import QGraphicsBlurEffect
 from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QLineEdit, QPushButton,

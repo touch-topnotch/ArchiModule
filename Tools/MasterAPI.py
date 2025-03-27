@@ -97,6 +97,14 @@ class MasterAPI(QObject):
             return Gen3dId(**response.json())
         except:
             raise Exception(response.text)
+    async def remove_background_pipeline(self, token, removeBackgroundInput:RemoveBackgroundInput):
+        response = requests.post(self.API_BASE_URL+"/tools/v1/remove-background-pipeline", 
+            json=removeBackgroundInput.model_dump(),
+            headers={"Authorization": f"{token.token_type} {token.access_token}"})
+        try:
+            return Gen2dResult(**response.json())
+        except Exception as e:
+            raise Exception(response.text)
         
     async def remove_background(self, token, removeBackgroundInput:RemoveBackgroundInput):
         response = requests.post(self.API_BASE_URL+"/tools/v1/remove-background", 

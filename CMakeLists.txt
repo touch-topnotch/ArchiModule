@@ -44,19 +44,16 @@ if (DEFINED Archi_Resources)
         PATTERN "testprog.*" EXCLUDE
     )
 endif()
-
-set(ToolsPython_SRCS
-        Tools/__init__.py
-        Tools/ProjectContext.py
-        Tools/Authentication.py
-        Tools/MasterAPI.py
-        Tools/Models.py
-        Tools/View3d.py
-        Tools/GalleryUtils.py
-        Tools/Exporting.py
-        Tools/FullView.py
-        Tools/ConvertPNG.py
+set(ModulesPython_SRCS
+        Tools
 )
+foreach(module_dir IN LISTS ModulesPython_SRCS)
+    file(GLOB_RECURSE _module_files
+         RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+         "${module_dir}/*"
+    )
+    list(APPEND ToolsPython_SRCS ${_module_files})
+endforeach()
 set(AllScriptsPython_SRCS
         ${ToolsPython_SRCS}
 )
