@@ -194,7 +194,7 @@ class PrepareFor3dGen(PrepareWindow):
         self.formLayout.addRow(self.gallery)
         prompt_label = QLabel("Контекст проекта")
         self.formLayout.addRow(prompt_label)
-        self.prompt_edit = QPlainTextEdit()
+        self.prompt_edit = QLineEdit()
         self.prompt_edit.setMinimumHeight(80)
         self.prompt_edit.setAlignment(Qt.AlignTop)
         self.prompt_edit.setText(self.model.prompt)

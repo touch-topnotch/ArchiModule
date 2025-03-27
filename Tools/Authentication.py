@@ -5,7 +5,7 @@ from PySide.QtWidgets import QGraphicsBlurEffect
 from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QLineEdit, QPushButton,
                                QDockWidget)
 
-from MasterAPI import MasterAPI
+from Tools.MasterAPI import MasterAPI
 from enum import Enum
 
 

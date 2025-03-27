@@ -7,7 +7,6 @@ from PySide.QtGui import QVector3D, QColor
 from pydantic import BaseModel, ConfigDict
 from Tools import Models
 
-
 class View3DStyle(BaseModel):
     model_scale: float = 100
     model_position: QVector3D = QVector3D(0, 0, 0)
@@ -142,7 +141,7 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         self.alphaTexture = Qt3DRender.QTexture2D()
         self.alphaTextureImage = Qt3DRender.QTextureImage()
         self.alphaTextureImage.setSource(QUrl.fromLocalFile(self.data.texture.base_color_url))  # ✅ Replace with actual texture path
-        self.alphaTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
+        # self.alphaTexture.setFormat(Qt3DRender.QAbstractTexture.RGBA8_UNorm)
         self.alphaTexture.addTextureImage(self.alphaTextureImage)
         self.objMaterial.setDiffuse(self.alphaTexture)
         self.objMaterial.setShininess(0.0)
