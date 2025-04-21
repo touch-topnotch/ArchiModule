@@ -18,7 +18,7 @@ set(Archi_LIBS
         FreeCADApp
 )
 
-generate_from_xml(CommandPy)
+# generate_from_xml(CommandPy)
 
 SET(Python_SRCS
 #    CommandPy.xml
@@ -34,7 +34,7 @@ SET(Mod_SRCS
 if(FREECAD_USE_PCH)
     add_definitions(-D_PreComp_)
     GET_MSVC_PRECOMPILED_SOURCE("PreCompiled.cpp" PCH_SRCS ${Archi_SRCS})
-    ADD_MSVC_PRECOMPILED_HEADER(Archi PreCompiled.h PreCompiled.cpp PCH_SRCS)
+    ADD_MSVC_PRECOMPILED_HEADER(ArchiModule PreCompiled.h PreCompiled.cpp PCH_SRCS)
 endif(FREECAD_USE_PCH)
 
 SET(Archi_SRCS
@@ -49,16 +49,16 @@ SET(Archi_SRCS
 SOURCE_GROUP("Python" FILES ${Python_SRCS})
 SOURCE_GROUP("Module" FILES ${Mod_SRCS})
 
-add_library(Archi SHARED ${Archi_SRCS})
-target_link_libraries(Archi ${Archi_LIBS})
+add_library(ArchiModule SHARED ${Archi_SRCS})
+target_link_libraries(ArchiModule ${Archi_LIBS})
 if (FREECAD_WARN_ERROR)
-    target_compile_warn_error(Archi)
+    target_compile_warn_error(ArchiModule)
 endif()
 
 unset(_flag_found CACHE)
 check_cxx_compiler_flag("-Wno-deprecated-copy" _flag_found)
 if (_flag_found)
-    target_compile_options(Archi PRIVATE -Wno-deprecated-copy)
+    target_compile_options(ArchiModule PRIVATE -Wno-deprecated-copy)
 endif()
 
 
@@ -81,7 +81,7 @@ if(NOT ${Boost_VERSION} LESS 107500)
     endif()
 endif()
 
-SET_BIN_DIR(Archi Archi /Mod/Archi)
-SET_PYTHON_PREFIX_SUFFIX(Archi)
+SET_BIN_DIR(ArchiModule ArchiModule /Mod/ArchiModule)
+SET_PYTHON_PREFIX_SUFFIX(ArchiModule)
 
-INSTALL(TARGETS Archi DESTINATION ${CMAKE_INSTALL_LIBDIR})
+INSTALL(TARGETS ArchiModule DESTINATION ${CMAKE_INSTALL_LIBDIR})

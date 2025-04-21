@@ -1,8 +1,8 @@
 {
     "python.analysis.extraPaths": [
-        "/Applications/FreeCAD.app/Contents/Resources/Mod",
-        "/Applications/FreeCAD.app/Contents/Resources/lib",
-        "/Users/dmitry057/Library/Application Support/FreeCAD/Mod"
+        // "/Applications/FreeCAD.app/Contents/Resources/Mod",
+        // "/Applications/FreeCAD.app/Contents/Resources/lib",
+        // "/Users/dmitry057/Library/Application Support/FreeCAD/Mod"
     ],
    "python.languageServer": "Pylance"
 }

@@ -16,13 +16,13 @@ add_custom_target(ArchiScripts ALL
 )
 fc_target_copy_resource(ArchiScripts
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_BINARY_DIR}/Mod/Archi
+        ${CMAKE_BINARY_DIR}/Mod/ArchiModule
         ${Archi_Scripts})
 
 if (DEFINED Archi_Resources)
     fc_target_copy_resource(ArchiScripts
             ${CMAKE_CURRENT_SOURCE_DIR}
-            ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi
+            ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule
             ${Archi_Resources})
 endif()
 
@@ -30,7 +30,7 @@ INSTALL(
         FILES
         ${Archi_Scripts}
         DESTINATION
-        Mod/Archi
+        Mod/ArchiModule
 )
 
 if (DEFINED Archi_Resources)
@@ -38,7 +38,7 @@ if (DEFINED Archi_Resources)
         DIRECTORY
             Lib
         DESTINATION
-            ${CMAKE_INSTALL_DATADIR}/Mod/Archi
+            ${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule
         PATTERN "Makefile*" EXCLUDE
         PATTERN "*.pdf" EXCLUDE
         PATTERN "testprog.*" EXCLUDE
@@ -61,12 +61,12 @@ set(AllScriptsPython_SRCS
 ADD_CUSTOM_TARGET(ArchiModulesPython ALL SOURCES ${AllScriptsPython_SRCS})
 fc_target_copy_resource(ArchiModulesPython
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_BINARY_DIR}/Mod/Archi
+        ${CMAKE_BINARY_DIR}/Mod/ArchiModule
         ${AllScriptsPython_SRCS})
 
 INSTALL(
         FILES
         ${AllScriptsPython_SRCS}
         DESTINATION
-        Mod/Archi/
+        Mod/ArchiModule/
 )

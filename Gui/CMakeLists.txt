@@ -13,7 +13,7 @@ include_directories(
 )
 link_directories(${OCC_LIBRARY_DIR})
 set(ArchiGui_LIBS
-        Archi
+        ArchiModule
         FreeCADGui
 )
 
@@ -79,104 +79,104 @@ if (_flag_found)
 endif ()
 
 
-SET_BIN_DIR(ArchiGui ArchiGui /Mod/Archi)
+SET_BIN_DIR(ArchiGui ArchiGui /Mod/ArchiModule)
 SET_PYTHON_PREFIX_SUFFIX(ArchiGui)
 
-fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi" ${ArchiGuiIcon_SVG})
-file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi/*")
+fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule" ${ArchiGuiIcon_SVG})
+file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/*")
 
 
-fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi" ${ArchiGuiAnims_SVG})
-file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi/*")
+fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule" ${ArchiGuiAnims_SVG})
+file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/*")
 
 
-fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi" ${ArchiGenerations3d_GLTF})
-file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Archi/*")
+fc_copy_sources(ArchiGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule" ${ArchiGenerations3d_GLTF})
+file(GLOB copied_files "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/*")
 
 
 INSTALL(TARGETS ArchiGui DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 
-INSTALL(FILES ${ArchiGuiIcon_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/icons")
-INSTALL(FILES ${ArchiGuiAnims_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/anims")
-INSTALL(FILES ${ArchiGenerations3d_GLTF} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/generations3d")
-INSTALL(FILES ${AtchiPanels_UI} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Archi/Resources/panels")
+INSTALL(FILES ${ArchiGuiIcon_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/Resources/icons")
+INSTALL(FILES ${ArchiGuiAnims_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/Resources/anims")
+INSTALL(FILES ${ArchiGenerations3d_GLTF} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/Resources/generations3d")
+INSTALL(FILES ${AtchiPanels_UI} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/Resources/panels")
 
-set(PythonExtModules_Archi
-        pydantic
-        Pillow
-        requests
-        keyring
-)
-if(PYTHON_EXECUTABLE)
-        message(STATUS "Installing Python module: ${module}")
-        execute_process(
-                COMMAND ${PYTHON_EXECUTABLE} -m pip install --upgrade pip
-                RESULT_VARIABLE pip_install_result
-                OUTPUT_VARIABLE pip_install_output
-                ERROR_VARIABLE pip_install_error
-        )
-        if(NOT pip_install_result EQUAL 0)
-                message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
-        endif()
-        foreach(module ${PythonExtModules_Archi})
-                message(STATUS "Installing Python module: ${module}")
-                execute_process(
-                        COMMAND ${PYTHON_EXECUTABLE} -m pip install ${module}
-                        RESULT_VARIABLE pip_install_result
-                        OUTPUT_VARIABLE pip_install_output
-                        ERROR_VARIABLE pip_install_error
-                )
-                if(NOT pip_install_result EQUAL 0)
-                        message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
-                endif()
-        endforeach()
+# set(PythonExtModules_Archi
+        # pydantic
+        # Pillow
+        # requests
+        # keyring
+# )
+# if(PYTHON_EXECUTABLE)
+#         message(STATUS "Installing Python module: ${module}")
+#         execute_process(
+#                 COMMAND ${PYTHON_EXECUTABLE} -m pip install --upgrade pip
+#                 RESULT_VARIABLE pip_install_result
+#                 OUTPUT_VARIABLE pip_install_output
+#                 ERROR_VARIABLE pip_install_error
+#         )
+#         if(NOT pip_install_result EQUAL 0)
+#                 message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
+#         endif()
+#         foreach(module ${PythonExtModules_Archi})
+#                 message(STATUS "Installing Python module: ${module}")
+#                 execute_process(
+#                         COMMAND ${PYTHON_EXECUTABLE} -m pip install ${module}
+#                         RESULT_VARIABLE pip_install_result
+#                         OUTPUT_VARIABLE pip_install_output
+#                         ERROR_VARIABLE pip_install_error
+#                 )
+#                 if(NOT pip_install_result EQUAL 0)
+#                         message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
+#                 endif()
+#         endforeach()
 
-          message(STATUS "Checking PySide6 version...")
+#           message(STATUS "Checking PySide6 version...")
 
-        # Get the installed PySide6 version
-        execute_process(
-                COMMAND ${PYTHON_EXECUTABLE} -c "import PySide6; print(PySide6.__version__)"
-                OUTPUT_VARIABLE PYSIDE6_VERSION
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_VARIABLE PYSIDE6_VERSION_ERROR
-        )
+#         # Get the installed PySide6 version
+#         execute_process(
+#                 COMMAND ${PYTHON_EXECUTABLE} -c "import PySide6; print(PySide6.__version__)"
+#                 OUTPUT_VARIABLE PYSIDE6_VERSION
+#                 OUTPUT_STRIP_TRAILING_WHITESPACE
+#                 ERROR_VARIABLE PYSIDE6_VERSION_ERROR
+#         )
 
 
-        if(PYSIDE6_VERSION)
-                message(STATUS "Detected PySide6 version: ${PYSIDE6_VERSION}")
+#         if(PYSIDE6_VERSION)
+#                 message(STATUS "Detected PySide6 version: ${PYSIDE6_VERSION}")
 
-                # Upgrade pip (optional but recommended)
-                execute_process(
-                COMMAND ${PYTHON_EXECUTABLE} -m pip install --upgrade pip
-                        RESULT_VARIABLE pip_upgrade_result
-                        OUTPUT_VARIABLE pip_upgrade_output
-                        ERROR_VARIABLE pip_upgrade_error
-                )
-                if(NOT pip_upgrade_result EQUAL 0)
-                        message(WARNING "pip upgrade failed: ${pip_upgrade_error}")
-                endif()
+#                 # Upgrade pip (optional but recommended)
+#                 execute_process(
+#                 COMMAND ${PYTHON_EXECUTABLE} -m pip install --upgrade pip
+#                         RESULT_VARIABLE pip_upgrade_result
+#                         OUTPUT_VARIABLE pip_upgrade_output
+#                         ERROR_VARIABLE pip_upgrade_error
+#                 )
+#                 if(NOT pip_upgrade_result EQUAL 0)
+#                         message(WARNING "pip upgrade failed: ${pip_upgrade_error}")
+#                 endif()
 
-                # List of modules to install at the detected version
-                set(PythonExtModules_Archi
-                        "PySide6-Addons==${PYSIDE6_VERSION}"
-                )
+#                 # List of modules to install at the detected version
+#                 set(PythonExtModules_Archi
+#                         # "PySide6-Addons==${PYSIDE6_VERSION}"
+#                 )
 
-                foreach(module ${PythonExtModules_Archi})
-                message(STATUS "Installing Python module: ${module}")
-                execute_process(
-                        COMMAND ${PYTHON_EXECUTABLE} -m pip install --no-cache-dir ${module}
-                        RESULT_VARIABLE pip_install_result
-                        OUTPUT_VARIABLE pip_install_output
-                        ERROR_VARIABLE pip_install_error
-                )
-                if(NOT pip_install_result EQUAL 0)
-                        message(FATAL_ERROR "Failed to install ${module}:\n${pip_install_error}")
-                endif()
-                endforeach()
-        endif()
+#                 foreach(module ${PythonExtModules_Archi})
+#                 message(STATUS "Installing Python module: ${module}")
+#                 execute_process(
+#                         COMMAND ${PYTHON_EXECUTABLE} -m pip install --no-cache-dir ${module}
+#                         RESULT_VARIABLE pip_install_result
+#                         OUTPUT_VARIABLE pip_install_output
+#                         ERROR_VARIABLE pip_install_error
+#                 )
+#                 if(NOT pip_install_result EQUAL 0)
+#                         message(FATAL_ERROR "Failed to install ${module}:\n${pip_install_error}")
+#                 endif()
+#                 endforeach()
+#         endif()
 
-endif()
+# endif()
 
 file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DCore.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DCore import *\n")
 file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DExtras.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DExtras import *\n")

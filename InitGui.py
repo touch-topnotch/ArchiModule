@@ -41,6 +41,7 @@ class ArchiWorkbench(Workbench):
         self.__class__.Icon = FreeCAD.getResourceDir() + "Mod/Archi/Resources/icons/Archi_Workbench.svg"
         self.__class__.MenuText = "Archi"
         self.__class__.ToolTip = "Archi workbench"
+        FreeCAD.Console.PrintMessage("ArchiWorkbench initialized\n")
 
     def Initialize(self):
         import Archi

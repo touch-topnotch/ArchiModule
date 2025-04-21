@@ -25,7 +25,7 @@
 
 #include <Gui/TaskView/TaskWatcher.h>
 #include <Gui/Workbench.h>
-#include <Mod/Archi/ArchiGlobal.h>
+#include <Mod/ArchiModule/ArchiGlobal.h>
 
 
 namespace ArchiGui
