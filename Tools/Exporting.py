@@ -16,7 +16,7 @@ class ProjectContextModel(BaseModel):
     
 recall_proj_name = "None"
 def get_project_path(proj_name = FreeCAD.ActiveDocument.Name):
-    project_path = f"{FreeCAD.getResourceDir()}Mod/Archi/Resources/{proj_name}"
+    project_path = f"{FreeCAD.getUserAppDataDir()}/Mod/Archi/Resources/{proj_name}"
     global recall_proj_name
     recall_proj_name = proj_name
     if not os.path.exists(f"{project_path}"):
@@ -64,6 +64,15 @@ def save_prop(key, value, proj_name = FreeCAD.ActiveDocument.Name):
     with open(f"{project_path}/ProjectContext.json", "r") as f:
         project_context = json.load(f)
         project_context[key] = value
+    with open(f"{project_path}/ProjectContext.json", "w") as f:
+        json.dump(project_context, f)
+
+def save_props(props, proj_name = FreeCAD.ActiveDocument.Name):
+    project_path = get_project_path(proj_name)
+    with open(f"{project_path}/ProjectContext.json", "r") as f:
+        project_context = json.load(f)
+        for key, value in props.items():
+            project_context[key] = value
     with open(f"{project_path}/ProjectContext.json", "w") as f:
         json.dump(project_context, f)
 

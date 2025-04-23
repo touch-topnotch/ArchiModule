@@ -87,7 +87,7 @@ using namespace std;
 //    if (pcDoc) {
 //        // print to console
 //        Base::Console().Message("Project Context activated\n");
-//        // create project context window using "ProjectContext.py" and function ArchiContextWindow(QDockWidget):
+//        // create project context window using "ProjectContext.py" and function ProjectContextWindow(QDockWidget):
 //        PyObject* pName = PyUnicode_DecodeFSDefault("ProjectContext");
 //        Base::Console().Message("PyObject* pName = PyUnicode_DecodeFSDefault(\"ProjectContext\");\n");
 //        PyObject* pModule = PyImport_Import(pName);
@@ -96,7 +96,7 @@ using namespace std;
 //        Base::Console().Message("Py_DECREF(pName);");
 //
 //        if (pModule != nullptr) {
-//            PyObject* pFunc = PyObject_GetAttrString(pModule, "ArchiContextWindow");
+//            PyObject* pFunc = PyObject_GetAttrString(pModule, "ProjectContextWindow");
 //            if (PyCallable_Check(pFunc)) {
 //                PyObject* pArgs = PyTuple_Pack(1, Py_None);
 //                PyObject* pValue = PyObject_CallObject(pFunc, pArgs);
@@ -115,7 +115,7 @@ using namespace std;
 //            } else {
 //                if (PyErr_Occurred())
 //                    PyErr_Print();
-//                Base::Console().Error("Cannot find function 'ArchiContextWindow'\n");
+//                Base::Console().Error("Cannot find function 'ProjectContextWindow'\n");
 //            }
 //            Py_XDECREF(pFunc);
 //            Py_DECREF(pModule);

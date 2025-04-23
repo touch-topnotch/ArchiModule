@@ -138,7 +138,7 @@ class AnimatedCell(GalleryCell):
 class LoadingCell(AnimatedCell):
     def __init__(self, svg_path = None, parent=None):
         if not svg_path:
-            svg_path = FreeCAD.getResourceDir() + "Mod/Archi/Resources/anims/Archi_Preloader.svg"
+            svg_path = FreeCAD.getResourceDir() + "Mod/ArchiModule/Resources/anims/Archi_Preloader.svg"
         super().__init__(svg_path, frame_duration=100, parent=parent)
 
     def update_progress(self, progress):

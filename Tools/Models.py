@@ -48,5 +48,9 @@ class RemoveBackgroundInput(BaseModel):
     image_base64: str
     keep_coords: List[Tuple[int, int]]
     remove_coords: List[Tuple[int, int]] = None
+    
+class RemoveBackgroundOutput(BaseModel):
+    image_base64: str
+
 class ClearBackgroundInput(BaseModel):
     image_base64: str

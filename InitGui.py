@@ -38,7 +38,7 @@ class ArchiWorkbench(Workbench):
     """Archi workbench."""
 
     def __init__(self):
-        self.__class__.Icon = FreeCAD.getResourceDir() + "Mod/Archi/Resources/icons/Archi_Workbench.svg"
+        self.__class__.Icon = FreeCAD.getResourceDir() + "Mod/ArchiModule/Resources/icons/Archi_Workbench.svg"
         self.__class__.MenuText = "Archi"
         self.__class__.ToolTip = "Archi workbench"
         FreeCAD.Console.PrintMessage("ArchiWorkbench initialized\n")
@@ -59,7 +59,7 @@ class ArchiWorkbench(Workbench):
         auth_session_command = Authentication.Archi_Authentication_Command(masterAPI=masterAPI)
         auth_session_command.Activated()
         session = auth_session_command.session
-        project_context_command = ProjectContext.Archi_ProjectContext_Command(session)
+        project_context_command = ProjectContext.ProjectContextCommand(session)
         project_context_command.Activated()
         
         # FreeCADGui.addCommand("Archi_ProjectContext", ProjectContext.Archi_ProjectContext_Command())
