@@ -20,7 +20,7 @@ from Tools import Exporting, Models
 from Tools.GalleryUtils import GalleryWidget, GalleryCell, GalleryStyle
 from Tools.ProjectContext.Utils.Widgets import MyRadioButton
 from Tools.ProjectContext.Utils.ImageUtils import apply_blur_effect, blend_images
-
+import Tools.log as log
 
 class ClickableLabel(QLabel):
     """A QLabel that emits a signal when clicked."""
@@ -221,7 +221,7 @@ class PrepareFor3dGen(FormWindow):
         try:
             pixmap = QPixmap(image_path)
             if pixmap.isNull():
-                FreeCAD.Console.PrintError(f"_load_and_prepare_image: Failed to load pixmap from {image_path}\n")
+                log.error(f"_load_and_prepare_image: Failed to load pixmap from {image_path}\n")
                 return False
 
             self.original_image_size = pixmap.size()
@@ -235,7 +235,7 @@ class PrepareFor3dGen(FormWindow):
 
             # Ensure target dimensions are valid integers
             target_width = max(1, int(target_width))
-            target_height = max(1, int(target_height)))
+            target_height = max(1, int(target_height))
 
             # Calculate scale factors, avoiding division by zero
             if target_width > 0 and target_height > 0:
@@ -391,13 +391,18 @@ class PrepareFor3dGen(FormWindow):
             self.image_display_label.setPixmap(self.current_pixmap)
 
             # Store coordinates for API call
-            point = (int(orig_x), int(orig_y))
+            point = (int(orig_x*self.display_scale_factors[0]), int(orig_y*self.display_scale_factors[1]))
             if self.selected_tool == self.ToolType.PEN:
                 # print(f"Adding PEN point: {point}") # Debug
                 self.pen_points.append(point)
             elif self.selected_tool == self.ToolType.ERASER:
                 # print(f"Adding ERASER point: {point}") # Debug
                 self.erased_points.append(point)
+            log.info(f"Image resolution: {self.original_pixmap.size()}")
+            if self.pen_points:
+                log.info(f"Pen point: {self.pen_points[-1]}")
+            if self.erased_points:
+                log.info(f"Eraser point: {self.erased_points[-1]}")
         except Exception as e:
              FreeCAD.Console.PrintError(f"_handle_image_click: Error during drawing: {e}\n")
              import traceback

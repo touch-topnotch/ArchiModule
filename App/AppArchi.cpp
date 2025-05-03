@@ -10,13 +10,13 @@
 #include <Base/Interpreter.h>
 
 
-namespace Archi
+namespace ArchiModule
 {
 class Module: public Py::ExtensionModule<Module>
 {
 public:
     Module()
-        : Py::ExtensionModule<Module>("Archi")
+        : Py::ExtensionModule<Module>("ArchiModule")
     {
         initialize("This module is Archi module.");  // register with Python
     }
@@ -27,11 +27,11 @@ PyObject* initModule()
     return Base::Interpreter().addModule(new Module);
 }
 
-}  // namespace Archi
+}  // namespace ArchiModule
 
 
 /* Python entry */
-PyMOD_INIT_FUNC(Archi)
+PyMOD_INIT_FUNC(ArchiModule)
 {
     // clang-format off
     // load dependent module
@@ -43,7 +43,7 @@ PyMOD_INIT_FUNC(Archi)
         PyMOD_Return(nullptr);
     }
 
-    PyObject* Archi = Archi::initModule();
+    PyObject* ArchiModule = ArchiModule::initModule();
     Base::Console().Log("Loading Archi module... done\n");
 
     // Add Types to module
@@ -54,6 +54,6 @@ PyMOD_INIT_FUNC(Archi)
     // This function is responsible for adding inherited slots from a type's base class.
 
     
-    PyMOD_Return(Archi);
+    PyMOD_Return(ArchiModule);
     // clang-format on
 }

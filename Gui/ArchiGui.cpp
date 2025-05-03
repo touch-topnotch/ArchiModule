@@ -77,7 +77,7 @@ PyMOD_INIT_FUNC(ArchiGui)
     try {
         Base::Interpreter().runString("import PartGui");
         Base::Interpreter().runString("import Part");
-        Base::Interpreter().runString("import Archi");
+        Base::Interpreter().runString("import ArchiModule");
         // set some default values
         // default speed for trajectory is 1m/s
 //        Base::Interpreter().runString("_DefSpeed = '1 m/s'");
