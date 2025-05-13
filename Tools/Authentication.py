@@ -8,7 +8,7 @@ from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QLineEdit, QPushButt
 
 from Tools.MasterAPI import MasterAPI
 from enum import Enum
-
+import Tools.log as log
 
 class AuthenticatedSession:
     def __init__(self, masterAPI: MasterAPI):
@@ -189,6 +189,9 @@ class Archi_Authentication_Command:
         }
 
     def Activated(self):
+        
+        log.info("Authentication command activated")
+        
         if self.authWindow is None:
             mw = FreeCADGui.getMainWindow()
             # find dock widgets with name Authentication
@@ -198,9 +201,10 @@ class Archi_Authentication_Command:
                 if widget.windowTitle() == "Authentication":
                     widget.close()
             self.session = AuthenticatedSession(self.masterAPI)
-            self.authWindow = ArchiAuthenticationWindow(lambda: print("Logged In"), self.session)
+            self.authWindow = ArchiAuthenticationWindow(lambda: log.info("Logged In"), self.session)
             mw.addDockWidget(Qt.RightDockWidgetArea, self.authWindow)
             self.authWindow.setFloating(True)
+
             # TODO: check if user is already logged in
             # self.session.try_auto_auth
         else:

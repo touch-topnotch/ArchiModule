@@ -44,26 +44,27 @@ class ArchiWorkbench(Workbench):
         FreeCAD.Console.PrintMessage("ArchiWorkbench initialized\n")
 
     def Initialize(self):
+        
+        if(FreeCAD.ActiveDocument == None):
+            return False
+        
         import Archi
         import ArchiGui
-
-        # import ProjectContext
         import Tools.Authentication as Authentication
         import Tools.MasterAPI as MasterAPI
         import Tools.ProjectContext as ProjectContext
         
-        if(FreeCAD.ActiveDocument == None):
-            return False
-
-        masterAPI = MasterAPI.MasterAPI("http://89.169.36.93:8001")
-        auth_session_command = Authentication.Archi_Authentication_Command(masterAPI=masterAPI)
-        auth_session_command.Activated()
-        session = auth_session_command.session
+        masterAPI               = MasterAPI.MasterAPI("http://89.169.36.93:8001")
+        auth_session_command    = Authentication.Archi_Authentication_Command(masterAPI=masterAPI)
+        session                 = auth_session_command.session
         project_context_command = ProjectContext.ProjectContextCommand(session)
-        project_context_command.Activated()
         
-        # FreeCADGui.addCommand("Archi_ProjectContext", ProjectContext.Archi_ProjectContext_Command())
-        # FreeCADGui.addCommand("Archi_Sketch3d", Archi_Sketch3d_Command())
+        FreeCADGui.addCommand("Archi_Authentication", auth_session_command)
+        FreeCADGui.addCommand("Archi_ProjectContext", project_context_command)
+    
+        
+        auth_session_command    .Activated()
+        project_context_command .Activated()
         return True
         
 

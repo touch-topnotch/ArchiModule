@@ -13,6 +13,7 @@ import threading
 from typing import Callable, Any, Optional
 from PySide.QtCore import QObject, Signal, Slot
 from Tools import ConvertPNG
+import Tools.log as log
 
 class AsyncWorker(QObject):
     result_ready = Signal(object, object)  # (result, error)
@@ -52,7 +53,7 @@ class MasterAPI(QObject):
     def auto_login(self):
         saved_username = keyring.get_password(self.APP_NAME, "username")
         saved_password = keyring.get_password(self.APP_NAME, "password")
-        print("Saved user: " + str(saved_username))
+        log.info("Saved user: " + str(saved_username))
         if saved_username and saved_password:
             response = requests.post(f"{self.API_BASE_URL}/auth/token",
                                     data={"username": saved_username, "password": saved_password})
@@ -74,7 +75,7 @@ class MasterAPI(QObject):
         return response.status_code
 
     async def generate_2d(self, token:str, gen2dInput:Gen2dInput):
-        print("Generating 2d. Endpoint: " + self.API_BASE_URL+"/tools/v1/pic_generator")
+        log.info("Generating 2d. Endpoint: " + self.API_BASE_URL+"/tools/v1/pic_generator")
         
         response = requests.post(f"{self.API_BASE_URL}/tools/v1/pic_generator", json={
             "image_base64": gen2dInput.image_base64,
@@ -143,14 +144,14 @@ class MasterAPI(QObject):
             if response.status_code != 200:
                 raise Exception(f"Failed to download file: {response.status_code}")
             try:
-                print("Saving file to " + str(path))
+                log.info("Saving file to " + str(path))
                 with open(path, "wb") as f:
                     f.write(response.content)
                 if(path.split('.')[-1] == 'png'):
-                    print("Converting to PNG")
+                    log.info("Converting to PNG")
                     ConvertPNG.convert_png(path, path)
                 else:
-                    print("Path " + str(path) + " is not a PNG")
+                    log.info("Path " + str(path) + " is not a PNG")
             except Exception as e:
                 raise Exception(f"Failed to save file: {e}")
 
