@@ -54,7 +54,7 @@ class PrepareFor3dGen(FormWindow):
         self.onObjIdReceived = onObjIdReceived
         self.auth_session = auth_session
         self.sketches_gallery_widget = generations # Store the input gallery
-        self.project_model = Exporting.load()
+        self.project_model = exporting.load()
 
         self.selected_render_path: Optional[str] = None
         self.pen_points: list[Tuple[int, int]] = []

@@ -31,7 +31,6 @@ class OrbitTransformController(QObject):
         super(OrbitTransformController, self).__init__(parent)
         self._target = None
         self._matrix = QMatrix4x4()
-        self._radius = 1
         self._angle = 0
 
     def setTarget(self, t):
@@ -39,15 +38,6 @@ class OrbitTransformController(QObject):
 
     def getTarget(self):
         return self._target
-
-    def setRadius(self, radius):
-        if self._radius != radius:
-            self._radius = radius
-            self.updateMatrix()
-            self.radiusChanged.emit()
-
-    def getRadius(self):
-        return self._radius
 
     def setAngle(self, angle):
         if self._angle != angle:
@@ -61,14 +51,11 @@ class OrbitTransformController(QObject):
     def updateMatrix(self):
         self._matrix.setToIdentity()
         self._matrix.rotate(self._angle, QVector3D(0, 1, 0))
-        self._matrix.translate(self._radius, 0, 0)
         if self._target is not None:
             self._target.setMatrix(self._matrix)
 
     angleChanged = Signal()
-    radiusChanged = Signal()
     angle = Property(float, getAngle, setAngle, notify=angleChanged)
-    radius = Property(float, getRadius, setRadius, notify=radiusChanged)
 
 class View3DWindow(Qt3DExtras.Qt3DWindow):
     data: Gen3dResult
@@ -163,11 +150,10 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         self.objEntity.addComponent(self.objMaterial)
         self.objEntity.addComponent(self.objTransform)
         
-         # Attach components to entity
+        # Attach components to entity
         self.controller = OrbitTransformController(self.objTransform)
         self.controller.setTarget(self.objTransform)
-        self.controller.setRadius(0)
-
+        
         if(self.view_3d_style.should_rotate):
             self.objRotateTransformAnimation = QPropertyAnimation(self.objTransform)
             self.objRotateTransformAnimation.setTargetObject(self.controller)

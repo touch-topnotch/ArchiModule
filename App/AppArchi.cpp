@@ -44,7 +44,6 @@ PyMOD_INIT_FUNC(ArchiModule)
     }
 
     PyObject* ArchiModule = ArchiModule::initModule();
-    Base::Console().Log("Loading Archi module... done\n");
 
     // Add Types to module
    

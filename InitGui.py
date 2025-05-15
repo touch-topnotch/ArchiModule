@@ -2,7 +2,7 @@
 
 import FreeCAD
 import FreeCADGui
-
+import tools.log as log
 
 class Archi_Sketch3d_Command:
     def GetResources(self):
@@ -41,6 +41,7 @@ class ArchiWorkbench(Workbench):
         self.__class__.Icon = FreeCAD.getResourceDir() + "Mod/ArchiModule/Resources/icons/Archi_Workbench.svg"
         self.__class__.MenuText = "Archi"
         self.__class__.ToolTip = "Archi workbench"
+        self.__class__.__Workbench__ = True
         
         self.auth_session_command = None
         self.project_context_command = None
@@ -57,20 +58,29 @@ class ArchiWorkbench(Workbench):
             import tools.master_api as master_api
             import tools.authentication as authentication
             
+            # Change the main window title
+            main_window = FreeCADGui.getMainWindow()
+            if main_window:
+                main_window.setWindowTitle("ARCHI 1.1.0 dev")
+            
             self.master_api_instance = master_api.MasterAPI("http://89.169.36.93:8001")
             
             self.auth_session_command = authentication.Archi_Authentication_Command(masterAPI=self.master_api_instance)
             FreeCADGui.addCommand("Archi_Authentication", self.auth_session_command)
             FreeCADGui.runCommand("Archi_Authentication")
-            return True
+
         except Exception as e:
             log.error(f"Error during workbench initialization: {str(e)}\n")
-            return False
+
 
     def Activated(self):
         try:
+                
             import tools.project_context as project_context
             import tools.log as log
+            
+            
+            main_window = FreeCADGui.getMainWindow()
             
             if self.auth_session_command is None:
                 if not self.Initialize():
@@ -88,9 +98,9 @@ class ArchiWorkbench(Workbench):
             project_context_command.Activated()
                 
             # Add commands to menu
-            self.appendMenu("Archi", ["Archi_ProjectContext", "Archi_Authentication"])
-            # Add commands to toolbars
-            self.appendToolbar("Archi tools", ["Archi_ProjectContext", "Archi_Authentication"])
+            # self.appendContextMenu("Archi", ["Archi_ProjectContext", "Archi_Authentication"])
+            # # Add commands to toolbars
+            # self.appendToolbar("Archi tools", ["Archi_ProjectContext", "Archi_Authentication"])
         except Exception as e:
             log.error(f"Error during workbench activation: {str(e)}\n")
 
@@ -115,6 +125,9 @@ class DocumentObserver:
             print(f"Project selected: {FreeCAD.ActiveDocument.Name}")
             self.workbench.Activated()
             self.singleton = True
+    
+    def slotCloseDocument(self, Doc):
+        log.info("On slotCloseDocument called")
 
 
     # def slotBeforeChangeDocument(self, Obj, Prop):
@@ -168,8 +181,8 @@ class DocumentObserver:
     # def slotBeforeCloseTransaction(self, abort):
     #     print("On slotBeforeCloseTransaction called")
 
-    # def slotCloseTransaction(self, abort):
-    #     print("On slotCloseTransaction called")
+    def slotCloseTransaction(self, abort):
+        log.info("On slotCloseTransaction called")
 
     # def slotAppendDynamicProperty(self, Prop):
     #     print("On slotAppendDynamicProperty called")

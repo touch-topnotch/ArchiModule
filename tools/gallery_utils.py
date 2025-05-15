@@ -265,6 +265,9 @@ class GalleryWidget(QWidget):
         self.replace_nice()
         
     def select_and_add_images(self, folder, action):
+        if not folder:
+            return
+        
         paths = select_images(folder)
         for path in paths:
             self.add_cell(ImageCell(path))

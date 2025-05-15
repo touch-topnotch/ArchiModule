@@ -97,7 +97,7 @@ PyMOD_INIT_FUNC(ArchiGui)
 
     PyObject* mod = ArchiGui::initModule();
 
-    Base::Console().Log("Loading GUI of Archi module... done\n");
+
 
     // instantiating the commands
     CreateArchiCommands();
