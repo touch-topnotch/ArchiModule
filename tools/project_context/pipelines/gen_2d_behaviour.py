@@ -7,15 +7,15 @@ import FreeCAD
 import FreeCADGui
 from PySide.QtCore import Qt, QObject, Signal
 from PySide.QtWidgets import QLineEdit, QMessageBox, QWidget
-from Tools.Authentication import AuthenticatedSession
-from Tools.MasterAPI import MasterAPI
-from Tools import Models
-from Tools.GalleryUtils import GalleryWidget, ImageCell, AnimatedCell
-from Tools.FullView import (FullViewWindow, FullViewWindowData, 
+from tools.authentication import AuthenticatedSession
+from tools.master_api import MasterAPI
+from tools import models as Models
+from tools.gallery_utils import GalleryWidget, ImageCell, AnimatedCell
+from tools.full_view import (FullViewWindow, FullViewWindowData, 
                            FullViewImageInteractable, FullViewButtonData)
-from Tools.ProjectContext.Utils.ProjectBehaviourBase import ProjectBehaviour
-from Tools.ProjectContext.Pipelines.PrepareFor2dGen import PrepareFor2dGen
-from Tools import Exporting
+from tools.project_context.utils.project_behaviour_base import ProjectBehaviour
+from tools.project_context.pipelines.prepare_for_2d_gen import PrepareFor2dGen
+from tools import exporting
 
 
 class UIStrings:
@@ -131,7 +131,11 @@ class Generate2dBehaviour(ProjectBehaviour):
         cell_id = self._show_loading_animation()
         
         # Start generation API call
-        token = self.authSession.token.access_token
+        if(self.authSession.auto_login()):
+            token = self.authSession.token.access_token
+        else:
+            self.authSession.show_login()
+            return
         self.masterApi.run_async_task(
             self.masterApi.generate_2d, 
             self.on_image_generated, 
@@ -146,9 +150,9 @@ class Generate2dBehaviour(ProjectBehaviour):
         Args:
             gen2dInput: Input parameters to save
         """
-        Exporting.save_prop("prompt", gen2dInput.prompt)
-        Exporting.save_prop("negative_prompt", gen2dInput.negative_prompt)
-        Exporting.save_prop("slider_value", gen2dInput.control_strength)
+        exporting.save_prop("prompt", gen2dInput.prompt)
+        exporting.save_prop("negative_prompt", gen2dInput.negative_prompt)
+        exporting.save_prop("slider_value", gen2dInput.control_strength)
         
         self.prompt_edit.setText(gen2dInput.prompt)
     
@@ -238,7 +242,7 @@ class Generate2dBehaviour(ProjectBehaviour):
             image_base64: Base64 encoded image data
         """
         # Create directory if needed
-        project_path = Exporting.get_project_path()
+        project_path = exporting.get_project_path()
         gen_dir = f"{project_path}/generations2d"
         if not os.path.exists(gen_dir):
             os.makedirs(gen_dir)
@@ -259,7 +263,7 @@ class Generate2dBehaviour(ProjectBehaviour):
         cell.action.connect(lambda cell: self.full_view.show(self.gen2d_interactable(cell)))
         
         # Save to project data
-        Exporting.save_arr_item("generations2d", path)
+        exporting.save_arr_item("generations2d", path)
     
     def gallery_on_delete_cell(self, gallery: GalleryWidget, item_name: str, cell: ImageCell):
         """
@@ -271,7 +275,7 @@ class Generate2dBehaviour(ProjectBehaviour):
             cell: The cell to delete
         """
         gallery.remove(cell.index)
-        Exporting.remove_arr_item(item_name, cell.image_path)
+        exporting.remove_arr_item(item_name, cell.image_path)
         self.full_view.close()
     
     def gen2d_interactable(self, cell: ImageCell) -> Optional[FullViewWindowData]:

@@ -45,7 +45,7 @@ if (DEFINED Archi_Resources)
     )
 endif()
 set(ModulesPython_SRCS
-        Tools
+        tools
 )
 foreach(module_dir IN LISTS ModulesPython_SRCS)
     file(GLOB_RECURSE _module_files

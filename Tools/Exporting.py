@@ -3,8 +3,8 @@ import json
 import os
 import FreeCAD
 from pydantic import BaseModel
-from Tools.Models import Gen3dSaved
-    
+from tools.models import Gen3dSaved
+import tools.log as log
 
 class ProjectContextModel(BaseModel):
     prompt: str
@@ -15,7 +15,12 @@ class ProjectContextModel(BaseModel):
     generations3d: List[Gen3dSaved]
     
 recall_proj_name = "None"
-def get_project_path(proj_name = FreeCAD.ActiveDocument.Name):
+def get_project_path(proj_name = None):
+    if(FreeCAD.ActiveDocument is None or FreeCAD.ActiveDocument.Name is None):
+        log.warning("No active document found")
+        return None
+    proj_name = proj_name or FreeCAD.ActiveDocument.Name
+    
     project_path = f"{FreeCAD.getUserAppDataDir()}/Mod/Archi/Resources/{proj_name}"
     global recall_proj_name
     recall_proj_name = proj_name
@@ -41,8 +46,11 @@ def rename_project(new_name, old_name = recall_proj_name):
     with open(f"{new_path}/ProjectContext.json", "w") as fw:
         fw.write(data)
     return new_path
-def save_source(folder, path, proj_name = FreeCAD.ActiveDocument.Name):
+def save_source(folder, path, proj_name = None):
     project_path = get_project_path(proj_name)
+    if(project_path is None):
+        log.warning("No project path found")
+        return
     if(not os.path.exists(f"{project_path}/{folder}")):
         os.makedirs(f"{project_path}/{folder}")
     to = f"{project_path}/{folder}/{path.split('/')[-1]}"
@@ -59,16 +67,22 @@ def save_source(folder, path, proj_name = FreeCAD.ActiveDocument.Name):
         
     return to
 
-def save_prop(key, value, proj_name = FreeCAD.ActiveDocument.Name):
+def save_prop(key, value, proj_name = None):
     project_path = get_project_path(proj_name)
+    if(project_path is None):
+        log.warning("No project path found")
+        return
     with open(f"{project_path}/ProjectContext.json", "r") as f:
         project_context = json.load(f)
         project_context[key] = value
     with open(f"{project_path}/ProjectContext.json", "w") as f:
         json.dump(project_context, f)
 
-def save_props(props, proj_name = FreeCAD.ActiveDocument.Name):
+def save_props(props, proj_name = None):
     project_path = get_project_path(proj_name)
+    if(project_path is None):
+        log.warning("No project path found")
+        return
     with open(f"{project_path}/ProjectContext.json", "r") as f:
         project_context = json.load(f)
         for key, value in props.items():
@@ -76,8 +90,11 @@ def save_props(props, proj_name = FreeCAD.ActiveDocument.Name):
     with open(f"{project_path}/ProjectContext.json", "w") as f:
         json.dump(project_context, f)
 
-def save_arr_item(key, value, proj_name = FreeCAD.ActiveDocument.Name):
+def save_arr_item(key, value, proj_name = None):
     project_path = get_project_path(proj_name)
+    if(project_path is None):
+        log.warning("No project path found")
+        return
     with open(f"{project_path}/ProjectContext.json", "r") as f:
         project_context = json.load(f)
         if(key not in project_context):
@@ -89,8 +106,11 @@ def save_arr_item(key, value, proj_name = FreeCAD.ActiveDocument.Name):
     with open(f"{project_path}/ProjectContext.json", "w") as f:
         json.dump(project_context, f)
     
-def remove_arr_item(key, value, proj_name = FreeCAD.ActiveDocument.Name):
+def remove_arr_item(key, value, proj_name = None):
     project_path = get_project_path(proj_name)
+    if(project_path is None):
+        log.warning("No project path found")
+        return
     with open(f"{project_path}/ProjectContext.json", "r") as f:
         project_context = json.load(f)
         if(key not in project_context):
@@ -108,8 +128,11 @@ def remove_arr_item(key, value, proj_name = FreeCAD.ActiveDocument.Name):
         json.dump(project_context, f)
         
 
-def load(project_name=FreeCAD.ActiveDocument.Name):
+def load(project_name=None):
     project_path = get_project_path(project_name)
+    if(project_path is None):
+        log.warning("No project path found")
+        return
     if not os.path.exists(f"{project_path}/ProjectContext.json"):
         with open(f"{project_path}/ProjectContext.json", "w") as f:
             json.dump({

@@ -6,13 +6,13 @@ from PySide.QtWidgets import QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDia
 from PySide.QtSvgWidgets import QSvgWidget
 from PySide.QtCore import QTimer, QPoint
 from PySide.QtCore import Qt
-from Tools.View3d import View3DWindow
-from Tools import Exporting
+from tools.view_3d import View3DWindow
+import tools.exporting as exporting
 from typing import List, Dict
 from pydantic import BaseModel, ConfigDict
-from Tools import Models
-from Tools.MasterAPI import MasterAPI
-from Tools.View3d import View3DStyle
+from tools.models import Gen3dSaved
+from tools.master_api import MasterAPI
+from tools.view_3d import View3DStyle
 
 class GalleryCell(QWidget):
 
@@ -145,8 +145,8 @@ class LoadingCell(AnimatedCell):
         print("Progress: ", progress)
 
 class View3DCell(GalleryCell):
-    view3dData:Models.Gen3dSaved = None
-    def __init__(self, view3dData:Models.Gen3dSaved, view_3d_style:View3DStyle, parent=None):
+    view3dData:Gen3dSaved = None
+    def __init__(self, view3dData:Gen3dSaved, view_3d_style:View3DStyle, parent=None):
         super().__init__(parent=parent)
         self.view3dData = view3dData
         self.viewer = View3DWindow(self.view3dData.local, view_3d_style)
@@ -288,7 +288,7 @@ def select_images(folder, single=False):
         )
         if not file:
             return  # user canceled
-        path = Exporting.save_source(folder, file)
+        path = exporting.save_source(folder, file)
         return path
     else:
         files, _ = QFileDialog.getOpenFileNames(
@@ -301,6 +301,6 @@ def select_images(folder, single=False):
             return  # user canceled
         paths = []
         for i in range(len(files)):
-            path = Exporting.save_source(folder, files[i])
+            path = exporting.save_source(folder, files[i])
             paths.append(path)
         return paths

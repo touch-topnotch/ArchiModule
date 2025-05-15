@@ -3,13 +3,13 @@ import asyncio
 
 from PySide.QtCore import Qt
 from PySide.QtWidgets import QMessageBox
-from Tools.View3d import View3DStyle
-from Tools.Authentication import AuthenticatedSession
-from Tools import Models
-from Tools.GalleryUtils import View3DCell, LoadingCell, GalleryWidget
-from Tools import Exporting
+from tools.view_3d import View3DStyle
+from tools.authentication import AuthenticatedSession
+from tools import models as Models
+from tools.gallery_utils import View3DCell, LoadingCell, GalleryWidget
+from tools import exporting
 
-from Tools.ProjectContext.Utils.ProjectBehaviourBase import ProjectBehaviour
+from tools.project_context.utils.project_behaviour_base import ProjectBehaviour
 
 class DownloadModelBehaviour(ProjectBehaviour):
     obj_id: Models.Gen3dId = None
@@ -67,7 +67,7 @@ class DownloadModelBehaviour(ProjectBehaviour):
                 return
             
             await self.__download_files(
-                root_folder=f"{Exporting.get_project_path()}/generations3d",
+                root_folder=f"{exporting.get_project_path()}/generations3d",
                 name=self.obj_id.obj_id
             )
 
@@ -122,7 +122,7 @@ class DownloadModelBehaviour(ProjectBehaviour):
                 obj_id=self.obj_id.obj_id
             )
             response = await self.auth_session.masterAPI.download_files(from_to_source)
-            Exporting.save_arr_item("generations3d", self.view_3d_data.model_dump())
+            exporting.save_arr_item("generations3d", self.view_3d_data.model_dump())
         
         except Exception as e:
             print(f"Failed to download files: {e}")

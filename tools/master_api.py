@@ -8,12 +8,12 @@ this script is responsible for testing the authentication of the user.
 import requests
 import keyring
 import asyncio
-from Tools.Models import Gen2dInput, Gen2dResult, Gen3dInput, Gen3dId, Gen3dResult, Token, RemoveBackgroundInput, ClearBackgroundInput
+from tools.models import Gen2dInput, Gen2dResult, Gen3dInput, Gen3dId, Gen3dResult, Token, RemoveBackgroundInput, ClearBackgroundInput
 import threading
 from typing import Callable, Any, Optional
 from PySide.QtCore import QObject, Signal, Slot
-from Tools import ConvertPNG
-import Tools.log as log
+from tools.convert_png import convert_png
+import tools.log as log
 
 class AsyncWorker(QObject):
     result_ready = Signal(object, object)  # (result, error)
@@ -49,7 +49,7 @@ class MasterAPI(QObject):
         
         # Connect the signal for main-thread invocation to its slot
         self.invokeInMainThread.connect(self.run_in_main_thread_slot)
-
+        
     def auto_login(self):
         saved_username = keyring.get_password(self.APP_NAME, "username")
         saved_password = keyring.get_password(self.APP_NAME, "password")
@@ -149,7 +149,7 @@ class MasterAPI(QObject):
                     f.write(response.content)
                 if(path.split('.')[-1] == 'png'):
                     log.info("Converting to PNG")
-                    ConvertPNG.convert_png(path, path)
+                    convert_png(path, path)
                 else:
                     log.info("Path " + str(path) + " is not a PNG")
             except Exception as e:

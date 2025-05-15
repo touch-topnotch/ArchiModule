@@ -6,10 +6,10 @@ from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDi
 
 from PySide.QtCore import QTimer, QPoint
 from PySide.QtCore import Qt
-from Tools.View3d import View3DWindow
-from Tools import Exporting
-from Tools import Models
-from Tools.ImageViewer import ImageViewer
+from tools.view_3d import View3DWindow
+import tools.exporting as exporting
+from tools.models import Gen2dResult
+from tools.image_viewer import ImageViewer
 from typing import List, Dict, Callable, Optional
 from pydantic import BaseModel, ConfigDict, SkipValidation
 
@@ -194,7 +194,7 @@ class FullViewWindow(QDockWidget):
 
         
 class FullView3DInteractable(QWidget):
-    def __init__(self, view3dData:Models.Gen2dResult, parent=None):
+    def __init__(self, view3dData:Gen2dResult, parent=None):
         super(FullView3DInteractable, self).__init__(parent)
         self.viewer = View3DWindow(view3dData)
         self.container = QWidget.createWindowContainer(self.viewer)

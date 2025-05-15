@@ -1,5 +1,5 @@
-from .ProjectContextCommand import ProjectContextCommand
-from .ProjectContextWindow import ProjectContextWindow
+from .project_context_command import ProjectContextCommand
+from .project_context_window import ProjectContextWindow
 
 # Optionally re-export symbols from subpackages if needed elsewhere
 # from .Pipelines import *

@@ -8,20 +8,20 @@ from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QLineEdit, QPushButt
                               QGroupBox, QFormLayout, QScrollArea, QDockWidget)
 from PySide.QtCore import Qt
 
-from Tools.View3d import View3DStyle
-from Tools.Authentication import AuthenticatedSession
-from Tools.MasterAPI import MasterAPI
-from Tools import Models
-from Tools.GalleryUtils import (ImageCell, View3DCell, 
+from tools.view_3d import View3DStyle
+from tools.authentication import AuthenticatedSession
+from tools.master_api import MasterAPI
+from tools.models import Gen3dId, Gen3dSaved
+from tools.gallery_utils import (ImageCell, View3DCell, 
                                 GalleryStyle, GalleryWidget, select_images)
-from Tools.FullView import (FullViewWindow, FullViewImageInteractable, FullView3DInteractable,
+from tools.full_view import (FullViewWindow, FullViewImageInteractable, FullView3DInteractable,
                             FullViewButtonData, FullViewWindowData)
-from Tools import Exporting
-from Tools.ProjectContext.Utils.ProjectBehaviourBase import ProjectBehaviour
-from Tools.ProjectContext.Pipelines.PrepareFor3dGen import PrepareFor3dGen
-from Tools.ProjectContext.Pipelines.DownloadModelBehaviour import DownloadModelBehaviour
-from Tools.ProjectContext.Pipelines.PrepareFor2dGen import PrepareFor2dGen
-from Tools.ProjectContext.Pipelines.Gen2dBehaviour import Generate2dBehaviour
+import tools.exporting as exporting
+from tools.project_context.utils.project_behaviour_base import ProjectBehaviour
+from tools.project_context.pipelines.prepare_for_3d_gen import PrepareFor3dGen
+from tools.project_context.pipelines.download_model_behaviour import DownloadModelBehaviour
+from tools.project_context.pipelines.prepare_for_2d_gen import PrepareFor2dGen
+from tools.project_context.pipelines.gen_2d_behaviour import Generate2dBehaviour
 
 
 # UI Constants
@@ -93,7 +93,7 @@ class ProjectContextWindow(QDockWidget):
         self._setup_3d_generation_section()
         
         # --- Load saved data ---
-        self.load_from_model(Exporting.load())
+        self.load_from_model(exporting.load())
     
     def _setup_main_ui(self):
         """Set up the main UI container and layout."""
@@ -155,7 +155,7 @@ class ProjectContextWindow(QDockWidget):
         self.prompt_edit.setAlignment(Qt.AlignTop)
         self.prompt_edit.setPlaceholderText(UIStrings.PROJECT_PROMPT_PLACEHOLDER)
         self.prompt_edit.textChanged.connect(
-            lambda: Exporting.save_prop("prompt", self.prompt_edit.text())
+            lambda: exporting.save_prop("prompt", self.prompt_edit.text())
         )
         
         form_layout.addRow(prompt_label)
@@ -255,7 +255,7 @@ class ProjectContextWindow(QDockWidget):
     def gallery_on_delete_cell(self, gallery, item_name, cell):
         """Handle deletion of a cell from a gallery."""
         gallery.remove(cell.index)
-        Exporting.remove_arr_item(item_name, cell.image_path)
+        exporting.remove_arr_item(item_name, cell.image_path)
         self.full_view.close()
     
     def sketch_interactable(self, cell):
@@ -316,7 +316,7 @@ class ProjectContextWindow(QDockWidget):
             )
         return None
     
-    def load_from_model(self, model: Exporting.ProjectContextModel):
+    def load_from_model(self, model: exporting.ProjectContextModel):
         """Load data from a saved project model."""
         # Load project prompt
         self.prompt_edit.setText(model.prompt)
@@ -362,18 +362,18 @@ class ProjectContextWindow(QDockWidget):
         self.create3dModel.setFloating(True) # Optional: Make it float
         self.create3dModel.show()              # Make it visible
     
-    def on_obj_id_generated(self, result: Optional[Models.Gen3dId], error: Optional[Exception]):
+    def on_obj_id_generated(self, result: Optional[Gen3dId], error: Optional[Exception]):
         """Handle callback when a 3D model ID is generated."""
         if error or result is None:
             return
             
-        saved = Models.Gen3dSaved(
+        saved = Gen3dSaved(
             local=None,
             online=None,
             obj_id=result.obj_id
         )
         
-        Exporting.save_arr_item("generations3d", saved.model_dump())
+        exporting.save_arr_item("generations3d", saved.model_dump())
         
         # Add download behavior to track model downloading
         status_callback = lambda x: print("Status of loading model - ", x)

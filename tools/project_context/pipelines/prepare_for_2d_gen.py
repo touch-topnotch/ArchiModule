@@ -8,9 +8,9 @@ from PySide.QtCore import Qt
 from PySide.QtWidgets import (QLabel, QSlider, QLineEdit, QGraphicsOpacityEffect,
                               QGraphicsBlurEffect, QPushButton, QMessageBox, QWidget,
                               QTextEdit)
-from Tools.ProjectContext.Pipelines.FormWindow import FormWindow
-from Tools import Exporting, Models
-from Tools.GalleryUtils import GalleryWidget, GalleryStyle, GalleryCell
+from tools.project_context.pipelines.form_window import FormWindow
+from tools import exporting, models
+from tools.gallery_utils import GalleryWidget, GalleryStyle, GalleryCell
 
 
 class UIStrings:
@@ -41,7 +41,7 @@ class PrepareFor2dGen(FormWindow):
     Inherits basic window setup and sizing from FormWindow.
     """
     
-    def __init__(self, sketches: GalleryWidget, onApprove: Callable[[Models.Gen2dInput], None], parent: QWidget = None):
+    def __init__(self, sketches: GalleryWidget, onApprove: Callable[[models.Gen2dInput], None], parent: QWidget = None):
         """
         Initialize the PrepareFor2dGen dialog.
         
@@ -56,7 +56,7 @@ class PrepareFor2dGen(FormWindow):
         self.onApprove = onApprove
         self.selected_sketch_path: Optional[str] = None
         self.input_sketches_widget = sketches
-        self.project_model = Exporting.load()
+        self.project_model = exporting.load()
         self.selection_gallery: Optional[GalleryWidget] = None
         self.prompt_edit: Optional[QTextEdit] = None
         self.n_prompt_edit: Optional[QTextEdit] = None
@@ -203,13 +203,13 @@ class PrepareFor2dGen(FormWindow):
 
         current_slider_val = self.realism_slider.value() / 100.0
 
-        Exporting.save_props({
+        exporting.save_props({
             "prompt": current_prompt,
             "negative_prompt": current_neg_prompt,
             "slider_value": current_slider_val
         })
 
-        gen2d_input = Models.Gen2dInput(
+        gen2d_input = models.Gen2dInput(
             image_base64=image_bytes_b64,
             prompt=current_prompt,
             control_strength=current_slider_val,

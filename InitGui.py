@@ -33,80 +33,87 @@ class Archi_FloorPlaner_Command:
     def IsActive(self):
         return True
 
-
 class ArchiWorkbench(Workbench):
     """Archi workbench."""
 
     def __init__(self):
+        
         self.__class__.Icon = FreeCAD.getResourceDir() + "Mod/ArchiModule/Resources/icons/Archi_Workbench.svg"
         self.__class__.MenuText = "Archi"
         self.__class__.ToolTip = "Archi workbench"
-        FreeCAD.Console.PrintMessage("ArchiWorkbench initialized\n")
+        
+        self.auth_session_command = None
+        self.project_context_command = None
+
+        self.session = None
 
     def Initialize(self):
         
-        if(FreeCAD.ActiveDocument == None):
+  
+        try:
+            import Archi
+            import ArchiGui
+            import tools.log as log
+            import tools.master_api as master_api
+            import tools.authentication as authentication
+            
+            self.master_api_instance = master_api.MasterAPI("http://89.169.36.93:8001")
+            
+            self.auth_session_command = authentication.Archi_Authentication_Command(masterAPI=self.master_api_instance)
+            FreeCADGui.addCommand("Archi_Authentication", self.auth_session_command)
+            FreeCADGui.runCommand("Archi_Authentication")
+            return True
+        except Exception as e:
+            log.error(f"Error during workbench initialization: {str(e)}\n")
             return False
-        
-        import Archi
-        import ArchiGui
-        import Tools.Authentication as Authentication
-        import Tools.MasterAPI as MasterAPI
-        import Tools.ProjectContext as ProjectContext
-        
-        masterAPI               = MasterAPI.MasterAPI("http://89.169.36.93:8001")
-        auth_session_command    = Authentication.Archi_Authentication_Command(masterAPI=masterAPI)
-        session                 = auth_session_command.session
-        project_context_command = ProjectContext.ProjectContextCommand(session)
-        
-        FreeCADGui.addCommand("Archi_Authentication", auth_session_command)
-        FreeCADGui.addCommand("Archi_ProjectContext", project_context_command)
-    
-        
-        auth_session_command    .Activated()
-        project_context_command .Activated()
-        return True
-        
 
     def Activated(self):
-        # Add commands to menu
-        self.appendMenu("Archi", ["Archi_ProjectContext", "Archi_Authentication"])
-        # Add commands to toolbars
-        self.appendToolbar("Archi Tools", ["Archi_ProjectContext"])
-        # Run authentication after everything is initialized
-
-        FreeCADGui.runCommand("Archi_Authentication")
+        try:
+            import tools.project_context as project_context
+            import tools.log as log
+            
+            if self.auth_session_command is None:
+                if not self.Initialize():
+                    log.error("Failed to initialize workbench\n")
+                    return
+                
+            if not self.auth_session_command.session or not self.auth_session_command.session.is_authenticated():
+                log.warning("User is not authenticated\n")
+                FreeCADGui.runCommand("Archi_Authentication")
+                return
+            
+            session = self.auth_session_command.session
+            project_context_command = project_context.ProjectContextCommand(session)
+            FreeCADGui.addCommand("Archi_ProjectContext", project_context_command)
+            project_context_command.Activated()
+                
+            # Add commands to menu
+            self.appendMenu("Archi", ["Archi_ProjectContext", "Archi_Authentication"])
+            # Add commands to toolbars
+            self.appendToolbar("Archi tools", ["Archi_ProjectContext", "Archi_Authentication"])
+        except Exception as e:
+            log.error(f"Error during workbench activation: {str(e)}\n")
 
     def Deactivated(self):
         pass
-
-    # def GetClassName(self):
-    #     return "Gui::Workbench"
-
 
 class DocumentObserver:
     
     def __init__(self, workbench):
         self.workbench = workbench
-
-
-    # def slotCreatedDocument(self, Doc):
-    #     print("On slotCreatedDocument called")
-
-    # def slotDeletedDocument(self, Doc):
-    #     print("On slotDeletedDocument called")
-
+        self.singleton = False
+        
     def slotRelabelDocument(self, Doc):
-        import Tools.Exporting as Exporting
-        # rename folder by Tools.Exporting.RenameFolder()
-        if(FreeCAD.ActiveDocument and FreeCAD.ActiveDocument.Name):
-            Exporting.rename_project(FreeCAD.ActiveDocument.Name)
+        import tools.exporting as exporting
+        # rename folder by tools.exporting.rename_project()
+        if FreeCAD.ActiveDocument and FreeCAD.ActiveDocument.Name:
+            exporting.rename_project(FreeCAD.ActiveDocument.Name)
             print("On slotRelabelDocument called")
 
     def slotActivateDocument(self, Doc):
         if FreeCAD.ActiveDocument and FreeCAD.ActiveDocument.Name:
             print(f"Project selected: {FreeCAD.ActiveDocument.Name}")
-            self.workbench.Initialize()
+            self.workbench.Activated()
             self.singleton = True
 
 
@@ -193,9 +200,13 @@ class DocumentObserver:
 
 
 
-archi_workbench = ArchiWorkbench()
-FreeCADGui.addWorkbench(archi_workbench)
-
-observer = DocumentObserver(archi_workbench)
-FreeCADGui.addDocumentObserver(observer)
-print("Archi workbench initialized")
+# Initialize workbench
+try:
+    archi_workbench = ArchiWorkbench()
+    FreeCADGui.addWorkbench(archi_workbench)
+    archi_workbench.Initialize()
+    observer = DocumentObserver(archi_workbench)
+    FreeCADGui.addDocumentObserver(observer)
+    FreeCAD.Console.PrintMessage("Archi workbench initialized successfully\n")
+except Exception as e:
+    FreeCAD.Console.PrintError(f"Error creating workbench: {str(e)}\n")

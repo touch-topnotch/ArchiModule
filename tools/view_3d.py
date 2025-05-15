@@ -5,7 +5,7 @@ from PySide.QtCore import (Property, QObject, QPropertyAnimation, Signal, QUrl)
 from PySide.QtGui import (QMatrix4x4)
 from PySide.QtGui import QVector3D, QColor
 from pydantic import BaseModel, ConfigDict
-from Tools import Models
+from tools.models import Gen3dResult, Gen3dSaved
 
 class View3DStyle(BaseModel):
     model_scale: float = 100
@@ -71,9 +71,9 @@ class OrbitTransformController(QObject):
     radius = Property(float, getRadius, setRadius, notify=radiusChanged)
 
 class View3DWindow(Qt3DExtras.Qt3DWindow):
-    data: Models.Gen3dResult
+    data: Gen3dResult
     
-    def __init__(self, data:Models.Gen3dResult, view_3d_style: View3DStyle = None, parent=None):
+    def __init__(self, data:Gen3dResult, view_3d_style: View3DStyle = None, parent=None):
         super(View3DWindow, self).__init__(parent)
         
         self.data = data
@@ -87,7 +87,7 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         self.frameGraph.setClearColor(self.view_3d_style.background_color)
         self.create_scene(self.data)
          
-    def create_scene(self, data: Models.Gen3dResult):
+    def create_scene(self, data: Gen3dResult):
         # Create Root Entity
         self.rootEntity = Qt3DCore.QEntity()
 
@@ -133,9 +133,9 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
 
         # Diffuse texture (base color)
         diffuse = Qt3DRender.QTextureLoader(self.objMaterial)
-        diffuse.setSource(QUrl.fromLocalFile(self.data.texture.base_color_url))
+        diffuse.setSource(QUrl.fromLocalFile(data.texture.base_color_url))
         specular = Qt3DRender.QTextureLoader(self.objMaterial)
-        specular.setSource(QUrl.fromLocalFile(self.data.texture.roughness_url))
+        specular.setSource(QUrl.fromLocalFile(data.texture.roughness_url))
         self.objMaterial.setDiffuse(diffuse)
         self.objMaterial.setSpecular(specular)
         # Shininess (scalar value)

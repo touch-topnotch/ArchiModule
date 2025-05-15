@@ -4,7 +4,7 @@ import FreeCADGui
 from PySide.QtWidgets import QDockWidget
 from PySide.QtCore import Qt
 
-from .ProjectContextWindow import ProjectContextWindow
+from .project_context_window import ProjectContextWindow
 
 
 class ProjectContextCommand:

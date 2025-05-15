@@ -14,13 +14,13 @@ from PySide.QtWidgets import (
 )
 from PySide.QtGui import QPixmap, QPainter, QPen, QIcon, QMouseEvent
 
-from .FormWindow import FormWindow
-from Tools.Authentication import AuthenticatedSession
-from Tools import Exporting, Models
-from Tools.GalleryUtils import GalleryWidget, GalleryCell, GalleryStyle
-from Tools.ProjectContext.Utils.Widgets import MyRadioButton
-from Tools.ProjectContext.Utils.ImageUtils import apply_blur_effect, blend_images
-import Tools.log as log
+from .form_window import FormWindow
+from tools.authentication import AuthenticatedSession
+from tools import exporting, models
+from tools.gallery_utils import GalleryWidget, GalleryCell, GalleryStyle
+from tools.project_context.utils.widgets import MyRadioButton
+from tools.project_context.utils.image_utils import apply_blur_effect, blend_images
+import tools.log as log
 
 class ClickableLabel(QLabel):
     """A QLabel that emits a signal when clicked."""
@@ -139,7 +139,7 @@ class PrepareFor3dGen(FormWindow):
         # Save prompt changes automatically
         self.prompt_edit.textChanged.connect(
              # Use lambda to get text from QTextEdit correctly
-             lambda: Exporting.save_prop("prompt", self.prompt_edit.toPlainText()) # Use toPlainText()
+             lambda: exporting.save_prop("prompt", self.prompt_edit.toPlainText()) # Use toPlainText()
         )
         self.formLayout.addRow(self.prompt_edit)
 
@@ -435,7 +435,7 @@ class PrepareFor3dGen(FormWindow):
              FreeCAD.Console.PrintError(f"_handle_remove_background: Failed to read file {last_image_path}: {e}\n")
              return
 
-        rb_input = Models.RemoveBackgroundInput(
+        rb_input = models.RemoveBackgroundInput(
             image_base64=image_bytes_b64,
             remove_coords=self.erased_points,
             keep_coords=self.pen_points
@@ -498,7 +498,7 @@ class PrepareFor3dGen(FormWindow):
                  return
 
         # Save the path of the final cleaned image
-        Exporting.save_prop("cleaned_image_path", final_image_path) # Save the path
+        exporting.save_prop("cleaned_image_path", final_image_path) # Save the path
         FreeCAD.Console.PrintMessage(f"_handle_approve_model: Saved cleaned_image_path: {final_image_path}")
 
         try:
@@ -509,13 +509,13 @@ class PrepareFor3dGen(FormWindow):
              FreeCAD.Console.PrintError(f"_handle_approve_model: Failed to read final file {final_image_path}: {e}\n")
              return
 
-        gen3d_input = Models.Gen3dInput(image_base64=image_bytes_b64)
+        gen3d_input = models.Gen3dInput(image_base64=image_bytes_b64)
         self._call_generate_3d_api(gen3d_input)
 
 
     # --- API Call Methods ---
 
-    def _call_remove_background_api(self, rb_input: Models.RemoveBackgroundInput, pen_points_used: list, erased_points_used: list):
+    def _call_remove_background_api(self, rb_input: models.RemoveBackgroundInput, pen_points_used: list, erased_points_used: list):
         """Calls the background removal API asynchronously."""
         FreeCAD.Console.PrintMessage("_call_remove_background_api: Starting")
         self.auth_session.auto_login()
@@ -541,7 +541,7 @@ class PrepareFor3dGen(FormWindow):
             removeBackgroundInput=rb_input
         )
 
-    def _call_generate_3d_api(self, gen3d_input: Models.Gen3dInput):
+    def _call_generate_3d_api(self, gen3d_input: models.Gen3dInput):
          """Calls the 3D generation API asynchronously."""
          FreeCAD.Console.PrintMessage("_call_generate_3d_api: Starting")
          self.auth_session.auto_login()
@@ -562,7 +562,7 @@ class PrepareFor3dGen(FormWindow):
 
     # --- API Callbacks ---
 
-    def _on_background_removed(self, result: Optional[Models.RemoveBackgroundOutput], error: Optional[Exception], pen_points_used: list, erased_points_used: list):
+    def _on_background_removed(self, result: Optional[models.RemoveBackgroundOutput], error: Optional[Exception], pen_points_used: list, erased_points_used: list):
         """Handles the result of the background removal API call."""
 
         self._hide_waiting_message()
@@ -591,7 +591,7 @@ class PrepareFor3dGen(FormWindow):
         FreeCAD.Console.PrintMessage("_on_background_removed: Success. Saving result.")
         # API call succeeded, points were used, keep the cleared lists (self.pen_points = [])
         try:
-            output_dir = os.path.join(Exporting.get_project_path(), "background_removed")
+            output_dir = os.path.join(exporting.get_project_path(), "background_removed")
             os.makedirs(output_dir, exist_ok=True)
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             new_image_path = os.path.join(output_dir, f"{timestamp}_removed.png")
@@ -622,7 +622,7 @@ class PrepareFor3dGen(FormWindow):
              FreeCAD.Console.PrintError(traceback.format_exc() + "\n")
              QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении/загрузке результата: {e}")
 
-    def _on_generated_3d(self, result: Optional[Models.Gen3dId], error: Optional[Exception]):
+    def _on_generated_3d(self, result: Optional[models.Gen3dId], error: Optional[Exception]):
         """Handles the result of the 3D generation API call."""
         FreeCAD.Console.PrintMessage("_on_generated_3d: Received callback")
         self._hide_waiting_message()
