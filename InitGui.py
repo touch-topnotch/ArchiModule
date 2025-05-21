@@ -3,6 +3,7 @@
 import FreeCAD
 import FreeCADGui
 import tools.log as log
+from FreeCADGui import Workbench
 
 class Archi_Sketch3d_Command:
     def GetResources(self):
@@ -41,16 +42,12 @@ class ArchiWorkbench(Workbench):
         self.__class__.Icon = FreeCAD.getResourceDir() + "Mod/ArchiModule/Resources/icons/Archi_Workbench.svg"
         self.__class__.MenuText = "Archi"
         self.__class__.ToolTip = "Archi workbench"
-        self.__class__.__Workbench__ = True
         
         self.auth_session_command = None
         self.project_context_command = None
-
         self.session = None
 
     def Initialize(self):
-        
-  
         try:
             import Archi
             import ArchiGui
@@ -68,6 +65,7 @@ class ArchiWorkbench(Workbench):
             self.auth_session_command = authentication.Archi_Authentication_Command(masterAPI=self.master_api_instance)
             FreeCADGui.addCommand("Archi_Authentication", self.auth_session_command)
             FreeCADGui.runCommand("Archi_Authentication")
+            
 
         except Exception as e:
             log.error(f"Error during workbench initialization: {str(e)}\n")
@@ -96,16 +94,21 @@ class ArchiWorkbench(Workbench):
             project_context_command = project_context.ProjectContextCommand(session)
             FreeCADGui.addCommand("Archi_ProjectContext", project_context_command)
             project_context_command.Activated()
-                
+            
+            
             # Add commands to menu
-            # self.appendContextMenu("Archi", ["Archi_ProjectContext", "Archi_Authentication"])
-            # # Add commands to toolbars
-            # self.appendToolbar("Archi tools", ["Archi_ProjectContext", "Archi_Authentication"])
+            self.appendContextMenu("Archi", ["Archi_ProjectContext", "Archi_Authentication"])
+            # Add commands to toolbars
+            self.appendToolbar("Archi tools", ["Archi_ProjectContext", "Archi_Authentication"])
+                
         except Exception as e:
             log.error(f"Error during workbench activation: {str(e)}\n")
 
     def Deactivated(self):
         pass
+    
+    def GetClassName(self):
+        return "Gui::PythonWorkbench"
 
 class DocumentObserver:
     

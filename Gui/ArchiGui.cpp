@@ -100,8 +100,8 @@ PyMOD_INIT_FUNC(ArchiGui)
 
 
     // instantiating the commands
-    CreateArchiCommands();
-    ArchiGui::Workbench::init();
+    // CreateArchiCommands();
+    // ArchiGui::Workbench::init();  // Comment out C++ workbench initialization
 
     // clang-format off
     // addition objects
