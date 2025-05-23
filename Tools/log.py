@@ -127,22 +127,22 @@ def _log(level, module_line_func, msg):
     """
     module, line, func = module_line_func
     
-    # if getLevel(module) >= level:
-    message = f"{MODULE_NAME}.{module}.{LogLevel.toString(level)}: {msg}"
-    if _useConsole:
-        message += "\n"
-        if level == LogLevel.NOTICE:
-            FreeCAD.Console.PrintLog(message+"\n")
-        elif level == LogLevel.WARNING:
-            FreeCAD.Console.PrintWarning(message+"\n")
-        elif level == LogLevel.ERROR:
-            FreeCAD.Console.PrintError(message+"\n")
+    if getLevel(module) >= level:
+        message = f"{MODULE_NAME}.{module}.{LogLevel.toString(level)}: {msg}"
+        if _useConsole:
+            message += "\n"
+            if level == LogLevel.NOTICE:
+                FreeCAD.Console.PrintLog(message)
+            elif level == LogLevel.WARNING:
+                FreeCAD.Console.PrintWarning(message)
+            elif level == LogLevel.ERROR:
+                FreeCAD.Console.PrintError(message)
+            else:
+                FreeCAD.Console.PrintMessage(message)
         else:
-            FreeCAD.Console.PrintMessage(message+"\n")
-    else:
-        print(message)
-    return message
-    # return None
+            print(message)
+        return message
+    return None
 
 
 def debug(msg):

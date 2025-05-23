@@ -32,8 +32,8 @@ SET(ArchiGui_SRCS_Module
         Resources/Archi.qrc
         PreCompiled.cpp
         PreCompiled.h
-        Workbench.cpp
-        Workbench.h
+        # Workbench.cpp
+        # Workbench.h
 )
 SOURCE_GROUP("Module" FILES ${ArchiGui_SRCS_Module})
 

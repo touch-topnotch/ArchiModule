@@ -31,7 +31,7 @@
 #include <Gui/Application.h>
 #include <Gui/Language/Translator.h>
 
-#include "Workbench.h"
+// #include "Workbench.h"
 
 
 // use a different name to CreateCommand()
