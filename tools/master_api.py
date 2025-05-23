@@ -6,34 +6,62 @@ this script is responsible for testing the authentication of the user.
 '''
 
 import requests
-import keyring
 import asyncio
-from tools.models import Gen2dInput, Gen2dResult, Gen3dInput, Gen3dId, Gen3dResult, Token, RemoveBackgroundInput, ClearBackgroundInput
-import threading
-from typing import Callable, Any, Optional
-from PySide.QtCore import QObject, Signal, Slot
+import inspect
+from tools.models import (Gen2dInput, Gen2dResult, Gen3dInput, Gen3dId, Gen3dResult,
+                          Token, RemoveBackgroundInput, ClearBackgroundInput, AsyncResponse)
 from tools.convert_png import convert_png
+from PySide.QtCore import QObject, Signal, QRunnable, QThreadPool, Slot
 import tools.log as log
+from typing import Callable, Any
 
-class AsyncWorker(QObject):
-    result_ready = Signal(object, object)  # (result, error)
+class UIStrings:
+    """Constant strings used in the UI."""
+    WRONG_CREDENTIALS = (
+        "Указанные логин или пароль не найдены. Повторите попытку, чтобы получить доступ к AI инструментам"
+    )
+    WRONG_CREDENTIALS_TITLE = "Неверные данные"
+    NO_CREDENTIALS = "Укажите логин и пароль, чтобы получить доступ к AI инструментам"
+    NO_CREDENTIALS_TITLE = "Нет данных"
+    CONNECTION_ABORTED = (
+        "Похоже, вы не подключены к интернету. Некоторые функции могут быть не доступны"
+    )
+    CONNECTION_ABORTED_TITLE = "Нет подключения"
 
-    def __init__(self):
+
+class WorkerSignals(QObject):
+    finished = Signal(object, object)  # emits (result, error)
+
+    
+class AsyncTask(QRunnable):
+    """
+    Generic task runner that handles both sync functions and coroutines.
+    Emits WorkerSignals.finished with (result, error).
+    """
+    def __init__(self, fn, *args, **kwargs):
         super().__init__()
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
 
-    def run(self, async_func, *args, **kwargs):
-        """Runs the given async function in a private event loop, then emits result_ready."""
+    @Slot()
+    def run(self):  # executes in thread pool
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(async_func(*args, **kwargs))
-            error = None
+            if inspect.iscoroutinefunction(self.fn):
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(self.fn(*self.args, **self.kwargs))
+                loop.close()
+            else:
+                result = self.fn(*self.args, **self.kwargs)
+                
+            if isinstance(result, AsyncResponse):
+                self.signals.finished.emit(result.result, result.error)
+            else:
+                self.signals.finished.emit(result, None)
         except Exception as e:
-            result = None
-            error = e
-        finally:
-            loop.close()
-        self.result_ready.emit(result, error)
+            self.signals.finished.emit(None, e)
 
 class MasterAPI(QObject):
     
@@ -42,37 +70,46 @@ class MasterAPI(QObject):
     
     # Signal used to transfer callables to the main thread.
     invokeInMainThread = Signal(object)  # Will carry a tuple (func, args, kwargs)
-
+    has_internet_connection = False
     def __init__(self, API_BASE_URL: str="http://localhost:8000"):
         super().__init__()
         self.API_BASE_URL = API_BASE_URL
+    
+    def __init__(self, api_base_url: str = None):
+        super().__init__()
+        if api_base_url:
+            self.API_BASE_URL = api_base_url
+        self.thread_pool = QThreadPool.globalInstance()
         
-        # Connect the signal for main-thread invocation to its slot
-        self.invokeInMainThread.connect(self.run_in_main_thread_slot)
-        
-    def auto_login(self):
-        saved_username = keyring.get_password(self.APP_NAME, "username")
-        saved_password = keyring.get_password(self.APP_NAME, "password")
-        log.info("Saved user: " + str(saved_username))
-        if saved_username and saved_password:
-            response = requests.post(f"{self.API_BASE_URL}/auth/token",
-                                    data={"username": saved_username, "password": saved_password})
-            if response.status_code == 200:
-                return Token(**response.json())
-        return None
-
-    def login_via_password(self, username: str, password: str):
-        response = requests.post(f"{self.API_BASE_URL}/auth/token", data={"username": username, "password": password})
-
-        if response.status_code in [200, 201]:
-            keyring.set_password(self.APP_NAME, "username", username)
-            keyring.set_password(self.APP_NAME, "password", password)
-            return Token(**response.json())
-        return None
-
-    def sign_up(self, username: str, password: str):
-        response = requests.post(f"{self.API_BASE_URL}/auth/", json={"username": username, "password": password})
-        return response.status_code
+    def _run_async(
+        self,
+        fn: Callable,
+        callback: Callable[[AsyncResponse], None],
+        *args,
+        **kwargs,
+    ):
+        """
+        Helper to run a function (sync or async) in background and invoke callback(result) on main thread.
+        """
+        task = AsyncTask(fn, *args, **kwargs)
+        def _on_finished(result, error):
+            
+            if(result is not None and isinstance(result, AsyncResponse)):
+                callback(result)
+                return
+            
+            if error:
+                if isinstance(error, Exception):
+                    callback(AsyncResponse(error=error))
+                    return
+                else:
+                    callback(AsyncResponse(error=Exception(str(error))))
+                    return
+                
+            callback(AsyncResponse(result=result))
+            
+        task.signals.finished.connect(_on_finished)
+        self.thread_pool.start(task)
 
     async def generate_2d(self, token:str, gen2dInput:Gen2dInput):
         log.info("Generating 2d. Endpoint: " + self.API_BASE_URL+"/tools/v1/pic_generator")
@@ -88,7 +125,8 @@ class MasterAPI(QObject):
         try:
             return Gen2dResult(**response.json())
         except Exception as e:
-            raise Exception(response.text)           
+            raise Exception(response.text)     
+        
             
     async def generate_3d(self, token:Token, gen3dInput:Gen3dInput):
    
@@ -165,23 +203,11 @@ class MasterAPI(QObject):
         for from_url, to_path in from_to_source:
             await self.download_file(from_url, to_path)
    
-    @Slot(object)
-    def run_in_main_thread_slot(self, data):
-        """Slot to run the callback in the main thread."""
-        func, args, kwargs = data
-        func(*args, **kwargs)
-
-    def run_in_main_thread(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
-        """
-        Emits invokeInMainThread so func(*args, **kwargs) is called on the main thread.
-        """
-        data_tuple = (func, args, kwargs)
-        self.invokeInMainThread.emit(data_tuple)
 
     def run_async_task(
         self,
         async_func: Callable[..., Any],
-        result_callback: Callable[[Optional[Any], Optional[Exception]], None],
+        result_callback: Callable[[AsyncResponse], None],
         *args: Any,
         **kwargs: Any
     ) -> None:
@@ -189,17 +215,4 @@ class MasterAPI(QObject):
         Runs an async function in a background thread, 
         then calls 'result_callback(result, error)' on the main thread.
         """
-        worker = AsyncWorker()
-
-        def on_result_ready(result, error):
-            # Schedule a main-thread call to 'result_callback(result, error)'
-            self.run_in_main_thread(result_callback, result, error)
-
-        worker.result_ready.connect(on_result_ready)
-        async_thread = threading.Thread(
-            target=worker.run,
-            args=(async_func, *args),
-            kwargs=kwargs,
-            daemon=True
-        )
-        async_thread.start()
+        self._run_async(async_func, result_callback, *args, **kwargs)   

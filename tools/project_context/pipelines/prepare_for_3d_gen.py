@@ -14,6 +14,7 @@ from PySide.QtWidgets import (
 )
 from PySide.QtGui import QPixmap, QPainter, QPen, QIcon, QMouseEvent
 
+
 from .form_window import FormWindow
 from tools.authentication import AuthenticatedSession
 from tools import exporting, models
@@ -21,7 +22,7 @@ from tools.gallery_utils import GalleryWidget, GalleryCell, GalleryStyle
 from tools.project_context.utils.widgets import MyRadioButton
 from tools.project_context.utils.image_utils import apply_blur_effect, blend_images
 import tools.log as log
-
+from tools.models import AsyncResponse
 class ClickableLabel(QLabel):
     """A QLabel that emits a signal when clicked."""
     clicked = Signal(QPoint)
@@ -337,7 +338,7 @@ class PrepareFor3dGen(FormWindow):
         """Handles the selection of the drawing tool."""
         if checked:
             self.selected_tool = tool_type
-            FreeCAD.Console.PrintMessage(f"Tool selected: {tool_type.name}")
+            log.debug(f"Tool selected: {tool_type.name}")
 
     def _handle_approve_render(self):
         """Checks selection and proceeds to the background removal step."""
@@ -360,7 +361,7 @@ class PrepareFor3dGen(FormWindow):
 
         # Calculate coordinates in the original image space
         orig_x, orig_y = self._map_display_to_original(pos)
-
+        log.debug(f"orig_x: {orig_x}, orig_y: {orig_y}")
         if orig_x is None: # Click outside image bounds
              return
 
@@ -398,11 +399,11 @@ class PrepareFor3dGen(FormWindow):
             elif self.selected_tool == self.ToolType.ERASER:
                 # print(f"Adding ERASER point: {point}") # Debug
                 self.erased_points.append(point)
-            log.info(f"Image resolution: {self.original_pixmap.size()}")
+            log.debug(f"Image resolution: {self.original_pixmap.size()}")
             if self.pen_points:
-                log.info(f"Pen point: {self.pen_points[-1]}")
+                log.debug(f"Pen point: {self.pen_points[-1]}")
             if self.erased_points:
-                log.info(f"Eraser point: {self.erased_points[-1]}")
+                log.debug(f"Eraser point: {self.erased_points[-1]}")
         except Exception as e:
              FreeCAD.Console.PrintError(f"_handle_image_click: Error during drawing: {e}\n")
              import traceback
@@ -424,9 +425,9 @@ class PrepareFor3dGen(FormWindow):
             return
 
         last_image_path = self.image_path_history[-1]
-        FreeCAD.Console.PrintMessage(f"_handle_remove_background: Processing {last_image_path}")
-        FreeCAD.Console.PrintMessage(f"_handle_remove_background: Pen points: {self.pen_points}")
-        FreeCAD.Console.PrintMessage(f"_handle_remove_background: Erase points: {self.erased_points}")
+        log.debug(f"_handle_remove_background: Processing {last_image_path}")
+        log.debug(f"_handle_remove_background: Pen points: {self.pen_points}")
+        log.debug(f"_handle_remove_background: Erase points: {self.erased_points}")
         try:
             with open(last_image_path, "rb") as f:
                 image_bytes_b64 = base64.b64encode(f.read())
@@ -452,12 +453,12 @@ class PrepareFor3dGen(FormWindow):
         """Reverts to the previous image state."""
 
         if len(self.image_path_history) <= 1:
-            FreeCAD.Console.PrintMessage("_handle_undo_remove_background: Cannot undo initial image.")
+            log.debug("_handle_undo_remove_background: Cannot undo initial image.")
             return # Cannot undo the original image
 
         self.image_path_history.pop()
         last_image_path = self.image_path_history[-1]
-        FreeCAD.Console.PrintMessage(f"_handle_undo_remove_background: Reverted to {last_image_path}")
+        log.debug(f"_handle_undo_remove_background: Reverted to {last_image_path}")
 
         if self._load_and_prepare_image(last_image_path):
             if self.image_display_label and self.current_pixmap:
@@ -474,19 +475,19 @@ class PrepareFor3dGen(FormWindow):
         if self.undo_button:
             can_undo = len(self.image_path_history) > 1
             self.undo_button.setVisible(can_undo)
-            FreeCAD.Console.PrintMessage(f"_handle_undo_remove_background: Undo button visible: {can_undo}")
+            log.debug(f"_handle_undo_remove_background: Undo button visible: {can_undo}")
 
 
     def _handle_approve_model(self):
         """Validates the final image and initiates the 3D generation API call."""
-        FreeCAD.Console.PrintMessage("_handle_approve_model")
+        log.debug("_handle_approve_model")
         if not self.image_path_history:
             QMessageBox.critical(self, "Ошибка", "Нет изображения для обработки.")
             self.close()
             return
 
         final_image_path = self.image_path_history[-1]
-        FreeCAD.Console.PrintMessage(f"_handle_approve_model: Approving image {final_image_path}")
+        log.debug(f"_handle_approve_model: Approving image {final_image_path}")
 
         # Check if any background removal steps were taken
         if len(self.image_path_history) == 1: # Only original image exists
@@ -494,12 +495,12 @@ class PrepareFor3dGen(FormWindow):
                                           "Фон не был изменен с помощью инструментов. Продолжить генерацию с оригиналом?",
                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
              if reply == QMessageBox.No:
-                 FreeCAD.Console.PrintMessage("_handle_approve_model: User chose not to proceed with original.")
+                 log.debug("_handle_approve_model: User chose not to proceed with original.")
                  return
 
         # Save the path of the final cleaned image
         exporting.save_prop("cleaned_image_path", final_image_path) # Save the path
-        FreeCAD.Console.PrintMessage(f"_handle_approve_model: Saved cleaned_image_path: {final_image_path}")
+        log.debug(f"_handle_approve_model: Saved cleaned_image_path: {final_image_path}")
 
         try:
             with open(final_image_path, "rb") as f:
@@ -517,41 +518,34 @@ class PrepareFor3dGen(FormWindow):
 
     def _call_remove_background_api(self, rb_input: models.RemoveBackgroundInput, pen_points_used: list, erased_points_used: list):
         """Calls the background removal API asynchronously."""
-        FreeCAD.Console.PrintMessage("_call_remove_background_api: Starting")
-        self.auth_session.auto_login()
-        if not self.auth_session.token:
-            FreeCAD.Console.PrintWarning("_call_remove_background_api: Not logged in. Showing login.\n")
-            self.auth_session.show_login()
-            # Restore points if login failed before API call
-            self.pen_points = pen_points_used
-            self.erased_points = erased_points_used
+        log.debug("_call_remove_background_api: Starting")
+        if not (self.auth_session.is_authenticated()):
+            self.auth_session.auto_login(callback=lambda: self._call_remove_background_api(rb_input, pen_points_used, erased_points_used))
             return
-
         self._show_waiting_message("Удаление фона", "Пожалуйста, подождите, идет удаление фона...")
 
-        callback = lambda result, error: self._on_background_removed(
-            result, error, pen_points_used, erased_points_used
-        )
+        def on_result(response):
+            if hasattr(response, 'error') and response.error:
+                self._on_background_removed(None, response.error, pen_points_used, erased_points_used)
+            else:
+                self._on_background_removed(response.result, None, pen_points_used, erased_points_used)
 
-        FreeCAD.Console.PrintMessage("_call_remove_background_api: Running async task")
+        log.debug("_call_remove_background_api: Running async task")
         self.auth_session.masterAPI.run_async_task(
             self.auth_session.masterAPI.remove_background_pipeline,
-            callback,
+            on_result,
             token=self.auth_session.token,
             removeBackgroundInput=rb_input
         )
 
     def _call_generate_3d_api(self, gen3d_input: models.Gen3dInput):
          """Calls the 3D generation API asynchronously."""
-         FreeCAD.Console.PrintMessage("_call_generate_3d_api: Starting")
-         self.auth_session.auto_login()
-         if not self.auth_session.token:
-             FreeCAD.Console.PrintWarning("_call_generate_3d_api: Not logged in. Showing login.\n")
-             self.auth_session.show_login()
-             return
-
+         log.debug("_call_generate_3d_api: Starting")
+         if not (self.auth_session.is_authenticated()):
+            self.auth_session.auto_login(callback=lambda: self._call_generate_3d_api(gen3d_input))
+            return
          self._show_waiting_message("Генерация 3d модели", "Пожалуйста, подождите, идет генерация 3d модели...")
-         FreeCAD.Console.PrintMessage("_call_generate_3d_api: Running async task")
+         log.debug("_call_generate_3d_api: Running async task")
          self.auth_session.masterAPI.run_async_task(
              self.auth_session.masterAPI.generate_3d,
              self._on_generated_3d,
@@ -576,7 +570,7 @@ class PrepareFor3dGen(FormWindow):
             # Restore drawing points as the API call failed
             self.pen_points = pen_points_used
             self.erased_points = erased_points_used
-            FreeCAD.Console.PrintMessage("_on_background_removed: Restored points due to error.")
+            log.debug("_on_background_removed: Restored points due to error.")
             return
 
         if not result or not result.image_base64:
@@ -585,17 +579,17 @@ class PrepareFor3dGen(FormWindow):
             # Restore drawing points as the API call failed
             self.pen_points = pen_points_used
             self.erased_points = erased_points_used
-            FreeCAD.Console.PrintMessage("_on_background_removed: Restored points due to no result.")
+            log.debug("_on_background_removed: Restored points due to no result.")
             return
 
-        FreeCAD.Console.PrintMessage("_on_background_removed: Success. Saving result.")
+        log.debug("_on_background_removed: Success. Saving result.")
         # API call succeeded, points were used, keep the cleared lists (self.pen_points = [])
         try:
             output_dir = os.path.join(exporting.get_project_path(), "background_removed")
             os.makedirs(output_dir, exist_ok=True)
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             new_image_path = os.path.join(output_dir, f"{timestamp}_removed.png")
-            FreeCAD.Console.PrintMessage(f"_on_background_removed: Saving to {new_image_path}")
+            log.debug(f"_on_background_removed: Saving to {new_image_path}")
 
             image_data = base64.b64decode(result.image_base64)
             if not image_data:
@@ -611,7 +605,7 @@ class PrepareFor3dGen(FormWindow):
                      self.image_display_label.setPixmap(self.current_pixmap)
                 if self.undo_button:
                      self.undo_button.show() # Show undo now that we have history
-                     FreeCAD.Console.PrintMessage("_on_background_removed: Undo button shown.")
+                     log.debug("_on_background_removed: Undo button shown.")
             else:
                  QMessageBox.warning(self, "Ошибка", "Не удалось загрузить обработанное изображение.")
                  self.image_path_history.pop() # Remove the failed path
@@ -622,26 +616,26 @@ class PrepareFor3dGen(FormWindow):
              FreeCAD.Console.PrintError(traceback.format_exc() + "\n")
              QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении/загрузке результата: {e}")
 
-    def _on_generated_3d(self, result: Optional[models.Gen3dId], error: Optional[Exception]):
+    def _on_generated_3d(self, response:AsyncResponse[models.Gen3dId]):
         """Handles the result of the 3D generation API call."""
-        FreeCAD.Console.PrintMessage("_on_generated_3d: Received callback")
+        log.debug("_on_generated_3d: Received callback")
         self._hide_waiting_message()
 
-        if error:
-            FreeCAD.Console.PrintError(f"_on_generated_3d: 3D Generation error: {error}\n")
-            QMessageBox.warning(self, "Ошибка", f"Ошибка при генерации 3d модели: {error}")
-            self.onObjIdReceived(None, error) # Pass error back
+        if response.error:
+            FreeCAD.Console.PrintError(f"_on_generated_3d: 3D Generation error: {response.error}\n")
+            QMessageBox.warning(self, "Ошибка", f"Ошибка при генерации 3d модели: {response.error}")
+            self.onObjIdReceived(None, response.error) # Pass error back
             return
 
-        if not result or not result.obj_id:
+        if not response.result or not response.result.obj_id:
             FreeCAD.Console.PrintWarning("_on_generated_3d: No result or obj_id received.\n")
             QMessageBox.warning(self, "Ошибка", "Ошибка при генерации 3d модели: Не получен ID объекта.")
             self.onObjIdReceived(None, "No result or obj_id") # Pass info back
             return
 
-        FreeCAD.Console.PrintMessage(f"_on_generated_3d: Success. Received obj_id: {result.obj_id}")
+        log.debug(f"_on_generated_3d: Success. Received obj_id: {response.result.obj_id}")
         QMessageBox.information(self, "Успешно", "Запрос на генерацию 3D модели успешно отправлен.")
-        self.onObjIdReceived(result, None) # Pass success result (obj_id) back
+        self.onObjIdReceived(response.result, None) # Pass success result (obj_id) back
         self.close() # Close the preparation window on success
 
 
@@ -649,7 +643,7 @@ class PrepareFor3dGen(FormWindow):
 
     def _update_display_pixmap(self, new_foreground_pixmap: QPixmap):
          """Blends the given foreground pixmap with the blurred background and updates the display."""
-         # FreeCAD.Console.PrintMessage("_update_display_pixmap: Updating")
+         # log.debug("_update_display_pixmap: Updating")
          if self.blurred_pixmap and not new_foreground_pixmap.isNull():
              try:
 
@@ -692,7 +686,7 @@ class PrepareFor3dGen(FormWindow):
                  FreeCAD.Console.PrintError(f"_update_display_pixmap: Error blending images: {e}\n")
                  self.current_pixmap = new_foreground_pixmap # Fallback to non-blended
          else:
-              # FreeCAD.Console.PrintMessage("_update_display_pixmap: Using foreground directly (no blur or invalid input).")
+              # log.debug("_update_display_pixmap: Using foreground directly (no blur or invalid input).")
               self.current_pixmap = new_foreground_pixmap # Use directly if no blur or invalid input
 
 
@@ -701,9 +695,11 @@ class PrepareFor3dGen(FormWindow):
         if not self.image_display_label or not self.current_pixmap or self.current_pixmap.isNull() \
            or not self.display_scale_factors or not self.original_image_size:
             return None, None
-
+        log.debug(f"display_pos 698: {display_pos}")
         pixmap_size = self.current_pixmap.size()
+        log.debug(pixmap_size)
         widget_size = self.image_display_label.size()
+        log.debug(widget_size)
 
         offset_x = max(0, (widget_size.width() - pixmap_size.width()) // 2)
         
@@ -715,11 +711,11 @@ class PrepareFor3dGen(FormWindow):
         if not (0 <= pixmap_x < pixmap_size.width() and 0 <= pixmap_y < pixmap_size.height()):
             return None, None
 
-        original_x = pixmap_x #* self.display_scale_factors[0]
-        original_y = pixmap_y #* self.display_scale_factors[1]
+        original_x = pixmap_x# * self.display_scale_factors[0]
+        original_y = pixmap_y# * self.display_scale_factors[1]
 
-        original_x = max(0.0, min(original_x, float(self.original_image_size.width() - 1)))
-        original_y = max(0.0, min(original_y, float(self.original_image_size.height() - 1)))
+        original_x = max(0.0, original_x)
+        original_y = max(0.0, original_y)
 
         return original_x, original_y
 
@@ -753,25 +749,29 @@ class PrepareFor3dGen(FormWindow):
 
     def closeEvent(self, event):
         """Ensure cleanup happens when the window is closed."""
-        FreeCAD.Console.PrintMessage(f"PrepareFor3dGen closing event for {id(self)}")
+        log.debug(f"PrepareFor3dGen closing event for {id(self)}")
         self._hide_waiting_message()
         self.original_pixmap = None
         self.blurred_pixmap = None
         self.current_pixmap = None
-        # Disconnect signals to prevent issues after close?
-        # if self.prompt_edit:
-        #     try: self.prompt_edit.textChanged.disconnect() except RuntimeError: pass
 
-        # Explicitly delete potentially large widgets if needed, though deleteLater in _clear_layout helps
-        if self.selection_gallery:
-            self.selection_gallery.deleteLater() # Schedule gallery for deletion
+        # Safely delete widgets
+        if hasattr(self, 'selection_gallery') and self.selection_gallery:
+            try:
+                self.selection_gallery.deleteLater()
+            except RuntimeError:
+                pass
             self.selection_gallery = None
-        if self.image_display_label:
-            self.image_display_label.deleteLater()
+
+        if hasattr(self, 'image_display_label') and self.image_display_label:
+            try:
+                self.image_display_label.deleteLater()
+            except RuntimeError:
+                pass
             self.image_display_label = None
 
         super().closeEvent(event)
 
     def __del__(self):
-        FreeCAD.Console.PrintMessage(f"PrepareFor3dGen instance {id(self)} being deleted.")
+        log.debug(f"PrepareFor3dGen instance {id(self)} being deleted.")
 

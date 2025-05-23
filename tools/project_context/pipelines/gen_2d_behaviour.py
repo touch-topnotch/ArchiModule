@@ -10,14 +10,14 @@ from PySide.QtWidgets import QLineEdit, QMessageBox, QWidget
 from tools.authentication import AuthenticatedSession
 from tools.master_api import MasterAPI
 from tools import models as Models
-from tools.gallery_utils import GalleryWidget, ImageCell, AnimatedCell
+from tools.gallery_utils import GalleryWidget, ImageCell, AnimatedCell, LoadingCell
 from tools.full_view import (FullViewWindow, FullViewWindowData, 
                            FullViewImageInteractable, FullViewButtonData)
 from tools.project_context.utils.project_behaviour_base import ProjectBehaviour
 from tools.project_context.pipelines.prepare_for_2d_gen import PrepareFor2dGen
 from tools import exporting
-
-
+from tools.models import AsyncResponse
+import tools.log as log
 class UIStrings:
     """Constant strings used in the UI."""
     DELETE_BUTTON = "Удалить"
@@ -34,7 +34,10 @@ class Generate2dBehaviour(ProjectBehaviour):
     Behavior for generating 2D renders from sketches.
     Handles the selection of sketches, generation of 2D renders, and display in the gallery.
     """
-    
+    estimated_generation_time_seconds: int = 25
+    additional_positive_prompt = " ultra-realistic cinematic lighting, sun light, vibrant natural color palette, crisp clarity, high dynamic range, professional photographic framing, depth and dimension, subtle lens effects, focus solely on the main structure with no extraneous details or constructions"
+    additional_negative_prompt = " flat lighting, dull colors, unnatural glow, excessive bloom, digital artifacts, artificial noise, oversharpening, distorted proportions, cartoonish flatness, lens distortion, moiré patterns, background clutter, extra structures, unnecessary details"
+   
     def __init__(self,
                  authSession: AuthenticatedSession,
                  masterApi: MasterAPI,
@@ -123,24 +126,40 @@ class Generate2dBehaviour(ProjectBehaviour):
 
         self._save_parameters(gen2dInput)
 
-        # Handle authentication if needed
-        if not self._ensure_authenticated():
-            return
 
         # Show loading animation
         cell_id = self._show_loading_animation()
         
         # Start generation API call
-        if(self.authSession.auto_login()):
+        if(self.authSession.is_authenticated()):
             token = self.authSession.token.access_token
         else:
-            self.authSession.show_login()
+            log.info("Gen2dBehaviour.generate_render: Starting auto login")
+            def on_auto_login(response: AsyncResponse):
+                if(response.has_result()):
+                    self.generate_render(gen2dInput)
+                else:
+                    QMessageBox.critical(None, "Ошибка авторизации", "Не удалось авторизоваться. Пожалуйста, проверьте ваш email и пароль.")
+                    return
+                
+            self.authSession.auto_login(on_auto_login)
             return
+        def on_generate_2d_animated(response: AsyncResponse[Optional[Models.Gen2dResult]]):
+            cell = self.gen2d.cells[cell_id]
+            if isinstance(cell, LoadingCell):
+                cell.show_max_progress_and_close(lambda: self.on_image_generated(response), 1000)
+        gen_2d_input_with_additional_prompt = Models.Gen2dInput(
+            prompt=gen2dInput.prompt + self.additional_positive_prompt,
+            negative_prompt=gen2dInput.negative_prompt + self.additional_negative_prompt,
+            control_strength=gen2dInput.control_strength,
+            image_base64=gen2dInput.image_base64,
+            seed=gen2dInput.seed
+        )
         self.masterApi.run_async_task(
             self.masterApi.generate_2d, 
-            self.on_image_generated, 
+            on_generate_2d_animated, 
             token=token, 
-            gen2dInput=gen2dInput
+            gen2dInput=gen_2d_input_with_additional_prompt
         )
     
     def _save_parameters(self, gen2dInput: Models.Gen2dInput):
@@ -156,19 +175,7 @@ class Generate2dBehaviour(ProjectBehaviour):
         
         self.prompt_edit.setText(gen2dInput.prompt)
     
-    def _ensure_authenticated(self) -> bool:
-        """
-        Ensure the user is authenticated.
-        
-        Returns:
-            True if authenticated, False otherwise
-        """
-        if not self.authSession or not self.authSession.token:
-            complete = self.authSession.auto_login()
-            if not complete:
-                self.authSession.show_login()
-                return False
-        return True
+   
     
     def _show_loading_animation(self) -> int:
         """
@@ -177,14 +184,13 @@ class Generate2dBehaviour(ProjectBehaviour):
         Returns:
             ID of the created cell
         """
-        loader_path = FreeCAD.getResourceDir() + "Mod/ArchiModule/Resources/anims/Archi_Preloader.svg"
-        cell = AnimatedCell(loader_path)
-        cell.setBackground(self.selectBestSketch.selected_sketch_path)
+        cell = LoadingCell()
+        cell.set_estimated_time(self.estimated_generation_time_seconds)  # Set estimated time to 30 seconds
         cell_id = self.gen2d.add_cell(cell)
         self.gen_stack.append(cell_id)
         return cell_id
     
-    def on_image_generated(self, result: Optional[Models.Gen2dResult], error: Optional[Exception]):
+    def on_image_generated(self, response: AsyncResponse[Optional[Models.Gen2dResult]]):
         """
         Handle the completion of image generation.
         
@@ -192,17 +198,18 @@ class Generate2dBehaviour(ProjectBehaviour):
             result: The generated image result
             error: Any error that occurred during generation
         """
-        if error or not result:
-            self._handle_generation_error(error)
+        
+        if response.has_error() or not response.has_result():
+            self._handle_generation_error(response.error)
             return
             
-        if not result.image_base64:
+        if not response.result.image_base64:
             self._show_error_message(UIStrings.INVALID_CHARS_ERROR)
             self._remove_loading_animation()
             return
         
         # Save and display the generated image
-        self._save_and_display_generated_image(result.image_base64)
+        self._save_and_display_generated_image(response.result.image_base64)
     
     def _handle_generation_error(self, error: Optional[Exception]):
         """
@@ -306,8 +313,17 @@ class Generate2dBehaviour(ProjectBehaviour):
 
     def __del__(self):
         """Destructor to print a message when the object is deleted."""
-        FreeCAD.Console.PrintMessage(f"Generate2dBehaviour instance {id(self)} being deleted.\n")
+        log.info(f"Generate2dBehaviour instance {id(self)} being deleted.\n")
         # Ensure any owned widgets like the dialog are closed/deleted if necessary
         if self.selectBestSketch:
             self.selectBestSketch.close() # Try closing it first
             self.selectBestSketch.deleteLater()
+
+    def _on_response_received(self, response):
+        """Handle the response from the generation process."""
+        if self.gen_stack:
+            cell_id = self.gen_stack[-1]
+            cell = self.gen2d.cells[cell_id]
+            if isinstance(cell, LoadingCell):
+                cell.complete()  # Mark loading as complete
+        # ... rest of the response handling code ...

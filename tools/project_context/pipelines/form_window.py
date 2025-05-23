@@ -46,7 +46,7 @@ class FormWindow(QDockWidget):
             main_win = FreeCADGui.getMainWindow()
             if not main_win:
                 self.resize(600, 500)
-                FreeCAD.Console.PrintMessage("FormWindow._calculate_and_set_geometry: Resized to default 600x500")
+                log.info("FormWindow._calculate_and_set_geometry: Resized to default 600x500")
                 return
 
             mw_geo = main_win.geometry()
@@ -60,7 +60,7 @@ class FormWindow(QDockWidget):
         except Exception as e:
             FreeCAD.Console.PrintError(f"FormWindow._calculate_and_set_geometry: Error: {e}\n")
             self.resize(600, 500)
-            FreeCAD.Console.PrintMessage("FormWindow._calculate_and_set_geometry: Resized to default 600x500 due to error")
+            log.info("FormWindow._calculate_and_set_geometry: Resized to default 600x500 due to error")
             raise
 
     # Optionally, add a method to easily add rows to the form layout

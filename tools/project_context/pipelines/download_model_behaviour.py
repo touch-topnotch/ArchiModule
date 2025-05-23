@@ -8,7 +8,7 @@ from tools.authentication import AuthenticatedSession
 from tools import models as Models
 from tools.gallery_utils import View3DCell, LoadingCell, GalleryWidget
 from tools import exporting
-
+from tools.models import AsyncResponse
 from tools.project_context.utils.project_behaviour_base import ProjectBehaviour
 
 class DownloadModelBehaviour(ProjectBehaviour):
@@ -27,9 +27,9 @@ class DownloadModelBehaviour(ProjectBehaviour):
         self.auth_session = auth_session
         self.view_3d_style = view_3d_style
 
-        loading_cell = LoadingCell()
-        loading_cell.update_progress(0)
-        self.index = self.gallery.add_cell(loading_cell)
+        self.loading_cell = LoadingCell()
+        self.loading_cell.update_progress(0)
+        self.index = self.gallery.add_cell(self.loading_cell)
         self.is_loading = True
         self.auth_session.masterAPI.run_async_task(self.__intervaled_responce, self.on_files_download)
         
@@ -39,10 +39,12 @@ class DownloadModelBehaviour(ProjectBehaviour):
             await asyncio.sleep(self.update_rate)
         
     async def __get_response(self):
-        token = self.auth_session.get_token()
-        if not token:
+        if(self.auth_session.token):
+            token = self.auth_session.token
+        else:
+            self.auth_session.auto_login(callback=lambda: self.__get_response())
             return
-
+       
         try:
             result = await self.auth_session.masterAPI.get_3d_obj(token=token, obj_id=self.obj_id)
         except Exception as e:
@@ -74,7 +76,9 @@ class DownloadModelBehaviour(ProjectBehaviour):
             self.is_loading = False
         else:
             print("is loading")
+            
             print(result)
+            self.loading_cell.update_progress(int(result.progress))
 
     async def __download_files(self, root_folder, name):
         try:
@@ -127,10 +131,10 @@ class DownloadModelBehaviour(ProjectBehaviour):
         except Exception as e:
             print(f"Failed to download files: {e}")
         
-    def on_files_download(self, result, error):
-        if error:
+    def on_files_download(self, response:AsyncResponse[Models.Gen3dSaved]):
+        if response.error:
             # QMessageBox.warning(self, "Ошибка", "Ошибка при загрузке файлов: " + str(error))
-            print(f"Failed to download files: {error}")
+            print(f"Failed to download files: {response.error}")
             # self.interrupt()
             return
         print(self.view_3d_data)
