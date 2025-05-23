@@ -93,7 +93,6 @@ class FullViewWindow(QDockWidget):
         # Hide button container if it's empty (optional, keeps layout clean)
         self.button_container_widget.setVisible(False)
 
-
     def show(self, data: Optional[FullViewWindowData]):
         """Shows new content in the FullViewWindow, replacing existing content."""
         print(f"FullViewWindow: show called with data: {'Present' if data else 'None'}")
@@ -179,7 +178,6 @@ class FullViewWindow(QDockWidget):
         self.raise_()
         self.activateWindow() # May not work perfectly for docked widgets, but best effort
 
-
     def close(self):
         """Hides the FullViewWindow. Content is cleared on next show()."""
         print("FullViewWindow: Hiding window via close().")
@@ -222,4 +220,6 @@ class FullViewImageInteractable(QWidget):
         self.layout.addWidget(self.viewer)
         self.setLayout(self.layout)
         self.viewer.show()
-        
+
+
+

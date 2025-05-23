@@ -235,8 +235,10 @@ class ProjectContextWindow(QDockWidget):
         
         # Gallery styles
         self.gen3dstyle = UIStyles.get_gallery_style(
-            min_height=400,
-            max_height=400
+            cols = 2,
+            min_height = 400,
+            gap = 10
+            
         )
         self.view_3d_style = UIStyles.get_3d_view_style()
         
