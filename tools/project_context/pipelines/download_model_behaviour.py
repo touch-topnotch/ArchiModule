@@ -4,7 +4,7 @@ import asyncio
 from PySide.QtCore import Qt
 from PySide.QtWidgets import QMessageBox
 from tools.view_3d import View3DStyle
-from tools.authentication import AuthenticatedSession
+from tools.authentication.authentication import AuthenticatedSession
 from tools import models as Models
 from tools.gallery_utils import View3DCell, LoadingCell, GalleryWidget
 from tools import exporting

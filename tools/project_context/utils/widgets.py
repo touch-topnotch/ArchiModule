@@ -1,5 +1,5 @@
 from PySide.QtWidgets import QRadioButton
-from PySide.QtGui import QGraphicsBlurEffect
+from PySide.QtWidgets import QGraphicsBlurEffect
 
 class MyRadioButton(QRadioButton):
     def __init__(self, parent=None):

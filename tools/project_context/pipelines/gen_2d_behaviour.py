@@ -145,9 +145,23 @@ class Generate2dBehaviour(ProjectBehaviour):
             self.authSession.auto_login(on_auto_login)
             return
         def on_generate_2d_animated(response: AsyncResponse[Optional[Models.Gen2dResult]]):
-            cell = self.gen2d.cells[cell_id]
+            log.info("Gen2dBehaviour.on_generate_2d_animated: callback entered")
+            try:
+                cell = self.gen2d.cells[cell_id]
+            except Exception as e:
+                FreeCAD.Console.PrintError(f"Gen2dBehaviour.on_generate_2d_animated: failed to get loading cell: {e}\n")
+                # Fallback: process image immediately
+                self.on_image_generated(response)
+                return
             if isinstance(cell, LoadingCell):
-                cell.show_max_progress_and_close(lambda: self.on_image_generated(response), 1000)
+                try:
+                    cell.show_max_progress_and_close(lambda: self.on_image_generated(response), 1000)
+                except Exception as e:
+                    FreeCAD.Console.PrintError(f"Gen2dBehaviour.on_generate_2d_animated: show_max_progress_and_close error: {e}\n")
+                    self.on_image_generated(response)
+            else:
+                # Unexpected cell type; process immediately
+                self.on_image_generated(response)
         gen_2d_input_with_additional_prompt = Models.Gen2dInput(
             prompt=gen2dInput.prompt + self.additional_positive_prompt,
             negative_prompt=gen2dInput.negative_prompt + self.additional_negative_prompt,

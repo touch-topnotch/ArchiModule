@@ -16,7 +16,7 @@ class Token(BaseModel):
     }
     
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "Bearer"
     delta_minutes: int = 15
     last_update: datetime = Field(default_factory=datetime.now)
 

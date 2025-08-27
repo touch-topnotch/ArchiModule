@@ -102,35 +102,8 @@ INSTALL(FILES ${ArchiGuiAnims_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Arc
 INSTALL(FILES ${ArchiGenerations3d_GLTF} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/Resources/generations3d")
 INSTALL(FILES ${AtchiPanels_UI} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/ArchiModule/Resources/panels")
 
-set(PythonExtModules_Archi
-        pydantic
-        Pillow
-        requests
-        keyring
-)
-if(PYTHON_EXECUTABLE AND FREECAD_LIBPACK_USE)
-        message(STATUS "Installing Python module: ${module}")
-        execute_process(
-                COMMAND ${PYTHON_EXECUTABLE} -m pip install --upgrade pip
-                RESULT_VARIABLE pip_install_result
-                OUTPUT_VARIABLE pip_install_output
-                ERROR_VARIABLE pip_install_error
-        )
-        if(NOT pip_install_result EQUAL 0)
-                message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
-        endif()
-        foreach(module ${PythonExtModules_Archi})
-                message(STATUS "Installing Python module: ${module}")
-                execute_process(
-                        COMMAND ${PYTHON_EXECUTABLE} -m pip install ${module}
-                        RESULT_VARIABLE pip_install_result
-                        OUTPUT_VARIABLE pip_install_output
-                        ERROR_VARIABLE pip_install_error
-                )
-                if(NOT pip_install_result EQUAL 0)
-                        message(FATAL_ERROR "Failed to install ${module}: ${pip_install_error}")
-                endif()
-        endforeach()
+# Install PySide6-Addons if needed
+if(PYTHON_EXECUTABLE)
 
           message(STATUS "Checking PySide6 version...")
 
@@ -158,11 +131,11 @@ if(PYTHON_EXECUTABLE AND FREECAD_LIBPACK_USE)
                 endif()
 
                 # List of modules to install at the detected version
-                set(PythonExtModules_Archi
+                set(PYSIDE6_ADDONS_MODULES
                         "PySide6-Addons==${PYSIDE6_VERSION}"
                 )
 
-                foreach(module ${PythonExtModules_Archi})
+                foreach(module ${PYSIDE6_ADDONS_MODULES})
                 message(STATUS "Installing Python module: ${module}")
                 execute_process(
                         COMMAND ${PYTHON_EXECUTABLE} -m pip install --no-cache-dir ${module}
@@ -178,7 +151,17 @@ if(PYTHON_EXECUTABLE AND FREECAD_LIBPACK_USE)
 
 endif()
 
+# Create PySide compatibility modules
 file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DCore.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DCore import *\n")
 file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DExtras.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DExtras import *\n")
 file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/Qt3DRender.py "from PySide${PYSIDE_MAJOR_VERSION}.Qt3DRender import *\n")
 file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/QtPrintSupport.py "from PySide${PYSIDE_MAJOR_VERSION}.QtPrintSupport import *\n")
+
+# Create QtSvg compatibility module to fix CAM module import error
+if(PYSIDE_MAJOR_VERSION LESS 6)
+    file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/QtSvg.py "from PySide${PYSIDE_MAJOR_VERSION}.QtSvg import *\n")
+    file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/QtSvgWidgets.py "from PySide${PYSIDE_MAJOR_VERSION}.QtSvg import QGraphicsSvgItem\nfrom PySide${PYSIDE_MAJOR_VERSION}.QtSvg import QSvgWidget\n")
+else()
+    file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/QtSvg.py "from PySide${PYSIDE_MAJOR_VERSION}.QtSvg import *\n")
+    file(WRITE ${CMAKE_BINARY_DIR}/Ext/PySide/QtSvgWidgets.py "from PySide${PYSIDE_MAJOR_VERSION}.QtSvgWidgets import *\n")
+endif()

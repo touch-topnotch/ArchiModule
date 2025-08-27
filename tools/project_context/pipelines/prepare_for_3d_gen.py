@@ -8,15 +8,15 @@ import FreeCADGui
 import FreeCAD # Added for PrintMessage
 from PySide.QtCore import Qt, QPoint, Signal, QSize
 from PySide.QtWidgets import (
-    QLabel, QLineEdit, QPushButton, QHBoxLayout,
+    QLabel, QPushButton, QHBoxLayout,
     QMessageBox, QGraphicsOpacityEffect, QGraphicsBlurEffect, QWidget,
-    QTextEdit # Import QTextEdit
+    QTextEdit
 )
 from PySide.QtGui import QPixmap, QPainter, QPen, QIcon, QMouseEvent
 
 
 from .form_window import FormWindow
-from tools.authentication import AuthenticatedSession
+from tools.authentication.authentication import AuthenticatedSession
 from tools import exporting, models
 from tools.gallery_utils import GalleryWidget, GalleryCell, GalleryStyle
 from tools.project_context.utils.widgets import MyRadioButton
@@ -136,7 +136,7 @@ class PrepareFor3dGen(FormWindow):
         self.prompt_edit = QTextEdit()
         self.prompt_edit.setMinimumHeight(80)
         # setAlignment and setWordWrap are not needed/available for QTextEdit
-        self.prompt_edit.setText(getattr(self.project_model, 'prompt', '')) # Load safely
+        self.prompt_edit.setPlainText(getattr(self.project_model, 'prompt', '')) # Load safely
         # Save prompt changes automatically
         self.prompt_edit.textChanged.connect(
              # Use lambda to get text from QTextEdit correctly

@@ -5,7 +5,7 @@ from typing import Callable, Optional, Any, List
 import FreeCADGui
 import FreeCAD
 from PySide.QtCore import Qt
-from PySide.QtWidgets import (QLabel, QSlider, QLineEdit, QGraphicsOpacityEffect,
+from PySide.QtWidgets import (QLabel, QSlider, QGraphicsOpacityEffect,
                               QGraphicsBlurEffect, QPushButton, QMessageBox, QWidget,
                               QTextEdit)
 from tools.project_context.pipelines.form_window import FormWindow
@@ -111,7 +111,7 @@ class PrepareFor2dGen(FormWindow):
         
         self.prompt_edit = QTextEdit()
         self.prompt_edit.setMinimumHeight(80)
-        self.prompt_edit.setText(getattr(self.project_model, 'prompt', ''))
+        self.prompt_edit.setPlainText(getattr(self.project_model, 'prompt', ''))
         self.formLayout.addRow(self.prompt_edit)
         
         self.n_prompt_label = QLabel(UIStrings.NEGATIVE_PROMPT_LABEL)
@@ -119,7 +119,7 @@ class PrepareFor2dGen(FormWindow):
         
         self.n_prompt_edit = QTextEdit()
         self.n_prompt_edit.setMinimumHeight(80)
-        self.n_prompt_edit.setText(getattr(self.project_model, 'negative_prompt', ''))
+        self.n_prompt_edit.setPlainText(getattr(self.project_model, 'negative_prompt', ''))
         self.formLayout.addRow(self.n_prompt_edit)
         
     def _setup_buttons(self):

@@ -49,8 +49,9 @@ set(Archi_Python_SRCS
     tools/project_context/utils/widgets.py
     tools/project_context/utils/project_behaviour_base.py
     tools/project_context/project_context_window.py
-    tools/authentication.py
-    tools/ProjectContext_OLD.py
+    tools/authentication/__init__.py
+    tools/authentication/authentication.py
+    tools/authentication/authentication_window.py
     tools/floor_planner.py
     tools/view_3d.py
     tools/convert_png.py
@@ -64,6 +65,12 @@ fc_target_copy_resource(ArchiModulesPython
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_BINARY_DIR}/Mod/ArchiModule
         ${Archi_Python_SRCS})
+
+# Copy requirements.txt to build directory
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt
+               ${CMAKE_BINARY_DIR}/Mod/ArchiModule/requirements.txt COPYONLY)
+
+
 
 # Install main scripts
 INSTALL(
@@ -80,6 +87,78 @@ INSTALL(
         DESTINATION
         Mod/ArchiModule
 )
+
+# Install requirements.txt
+INSTALL(
+        FILES
+        requirements.txt
+        DESTINATION
+        Mod/ArchiModule
+)
+
+# Install Python dependencies from requirements.txt
+if(PYTHON_EXECUTABLE)
+    message(STATUS "Installing ArchiModule Python dependencies...")
+    
+    # Read requirements.txt using Python script
+    set(REQUIREMENTS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt")
+    if(EXISTS ${REQUIREMENTS_FILE})
+        message(STATUS "Found requirements.txt: ${REQUIREMENTS_FILE}")
+        
+        # Use Python to read the file properly
+        execute_process(
+            COMMAND ${PYTHON_EXECUTABLE} -c "
+import sys
+requirements = []
+with open('${REQUIREMENTS_FILE}', 'r') as f:
+    for line in f:
+        line = line.strip()
+        if line and not line.startswith('#'):
+            requirements.append(line)
+print(';'.join(requirements))
+"
+            OUTPUT_VARIABLE REQUIREMENTS_CONTENT
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_VARIABLE REQUIREMENTS_ERROR
+        )
+        
+        if(REQUIREMENTS_ERROR)
+            message(FATAL_ERROR "Failed to read requirements.txt: ${REQUIREMENTS_ERROR}")
+        endif()
+        
+        # Split the requirements
+        string(REPLACE ";" ";" CLEAN_REQUIREMENTS_LIST "${REQUIREMENTS_CONTENT}")
+        message(STATUS "ArchiModule requirements to install: ${CLEAN_REQUIREMENTS_LIST}")
+        
+        # Install each requirement
+        foreach(module ${CLEAN_REQUIREMENTS_LIST})
+            message(STATUS "Installing ArchiModule Python module: ${module}")
+            execute_process(
+                COMMAND ${PYTHON_EXECUTABLE} -m pip install ${module}
+                RESULT_VARIABLE pip_install_result
+                OUTPUT_VARIABLE pip_install_output
+                ERROR_VARIABLE pip_install_error
+            )
+            if(NOT pip_install_result EQUAL 0)
+                message(WARNING "Failed to install ${module}: ${pip_install_error}")
+                message(STATUS "Trying to install with --user flag...")
+                execute_process(
+                    COMMAND ${PYTHON_EXECUTABLE} -m pip install --user ${module}
+                    RESULT_VARIABLE pip_install_user_result
+                    OUTPUT_VARIABLE pip_install_user_output
+                    ERROR_VARIABLE pip_install_user_error
+                )
+                if(NOT pip_install_user_result EQUAL 0)
+                    message(FATAL_ERROR "Failed to install ${module} even with --user flag: ${pip_install_user_error}")
+                endif()
+            endif()
+        endforeach()
+    else()
+        message(FATAL_ERROR "requirements.txt not found at ${REQUIREMENTS_FILE}")
+    endif()
+endif()
+
+
 
 if (DEFINED Archi_Resources)
     INSTALL(

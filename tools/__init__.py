@@ -1,5 +1,5 @@
 import tools.project_context as project_context
-import tools.authentication as authentication
+import tools.authentication.authentication as authentication
 import tools.master_api as master_api
 import tools.gallery_utils as gallery_utils
 import tools.models as models

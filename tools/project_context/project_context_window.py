@@ -4,12 +4,12 @@ import FreeCAD
 import FreeCADGui
 
 from PySide.QtGui import QVector3D
-from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QLineEdit, QPushButton,
+from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QTextEdit, QPushButton,
                               QGroupBox, QFormLayout, QScrollArea, QDockWidget)
 from PySide.QtCore import Qt
 
 from tools.view_3d import View3DStyle
-from tools.authentication import AuthenticatedSession
+from tools.authentication.authentication import AuthenticatedSession
 from tools.master_api import MasterAPI
 from tools.models import Gen3dId, Gen3dSaved
 from tools.gallery_utils import (ImageCell, View3DCell, 
@@ -150,12 +150,11 @@ class ProjectContextWindow(QDockWidget):
         prompt_label = QLabel(UIStrings.PROJECT_CONTEXT)
         prompt_label.setStyleSheet(UIStyles.SUBHEADER_STYLE)
         
-        self.prompt_edit = QLineEdit()
+        self.prompt_edit = QTextEdit()
         self.prompt_edit.setMinimumHeight(80)
-        self.prompt_edit.setAlignment(Qt.AlignTop)
         self.prompt_edit.setPlaceholderText(UIStrings.PROJECT_PROMPT_PLACEHOLDER)
         self.prompt_edit.textChanged.connect(
-            lambda: exporting.save_prop("prompt", self.prompt_edit.text())
+            lambda: exporting.save_prop("prompt", self.prompt_edit.toPlainText())
         )
         
         form_layout.addRow(prompt_label)
@@ -321,7 +320,7 @@ class ProjectContextWindow(QDockWidget):
     def load_from_model(self, model: exporting.ProjectContextModel):
         """Load data from a saved project model."""
         # Load project prompt
-        self.prompt_edit.setText(model.prompt)
+        self.prompt_edit.setPlainText(model.prompt)
         
         # Load sketches
         self._load_gallery_cells(

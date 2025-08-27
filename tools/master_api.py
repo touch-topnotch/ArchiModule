@@ -29,10 +29,6 @@ class UIStrings:
     CONNECTION_ABORTED_TITLE = "Нет подключения"
 
 
-class WorkerSignals(QObject):
-    finished = Signal(object, object)  # emits (result, error)
-
-    
 class AsyncTask(QRunnable):
     """
     Generic task runner that handles both sync functions and coroutines.
@@ -48,30 +44,43 @@ class AsyncTask(QRunnable):
     @Slot()
     def run(self):  # executes in thread pool
         try:
+            log.info(f"AsyncTask.run: starting function {self.fn.__name__}")
             if inspect.iscoroutinefunction(self.fn):
+                log.info("AsyncTask.run: detected coroutine, creating new event loop")
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 result = loop.run_until_complete(self.fn(*self.args, **self.kwargs))
                 loop.close()
+                log.info("AsyncTask.run: coroutine completed")
             else:
+                log.info("AsyncTask.run: calling sync function")
                 result = self.fn(*self.args, **self.kwargs)
+                log.info("AsyncTask.run: sync function completed")
                 
+            log.info(f"AsyncTask.run: result type={type(result).__name__}, is_async_response={isinstance(result, AsyncResponse)}")
             if isinstance(result, AsyncResponse):
+                log.info("AsyncTask.run: emitting AsyncResponse")
                 self.signals.finished.emit(result.result, result.error)
             else:
+                log.info("AsyncTask.run: emitting result with None error")
                 self.signals.finished.emit(result, None)
+            log.info("AsyncTask.run: signals.finished.emit completed")
         except Exception as e:
+            log.error(f"AsyncTask.run: exception occurred: {e}")
+            import traceback
+            log.error(f"AsyncTask.run: traceback: {traceback.format_exc()}")
             self.signals.finished.emit(None, e)
+
+class WorkerSignals(QObject):
+    finished = Signal(object, object)  # emits (result, error)
 
 class MasterAPI(QObject):
     
-    API_BASE_URL = "http://localhost:8000"
+    API_BASE_URL = "http://89.169.36.93:8001"
     APP_NAME = "Archi"
     
-    # Signal used to transfer callables to the main thread.
-    invokeInMainThread = Signal(object)  # Will carry a tuple (func, args, kwargs)
     has_internet_connection = False
-    def __init__(self, API_BASE_URL: str="http://localhost:8000"):
+    def __init__(self, API_BASE_URL: str="http://89.169.36.93:8001"):
         super().__init__()
         self.API_BASE_URL = API_BASE_URL
     
@@ -80,6 +89,14 @@ class MasterAPI(QObject):
         if api_base_url:
             self.API_BASE_URL = api_base_url
         self.thread_pool = QThreadPool.globalInstance()
+        # Keep strong references to active tasks to prevent GC before slots run
+        self._active_tasks = set()
+        # No extra main-thread relay; Qt will marshal signal deliveries appropriately
+
+    def _invoke_on_main(self, payload):
+        # Deprecated path; kept for compatibility if referenced elsewhere
+        func, args, kwargs = payload
+        func(*args, **kwargs)
         
     def _run_async(
         self,
@@ -92,20 +109,35 @@ class MasterAPI(QObject):
         Helper to run a function (sync or async) in background and invoke callback(result) on main thread.
         """
         task = AsyncTask(fn, *args, **kwargs)
+        # Parent the signal object to this MasterAPI to ensure it survives until delivery
+        try:
+            task.signals.setParent(self)
+        except Exception:
+            pass
+        # Retain the task strongly until finished
+        self._active_tasks.add(task)
         def _on_finished(result, error):
-            
-            if(result is not None and isinstance(result, AsyncResponse)):
+            # Release retained task
+            try:
+                self._active_tasks.discard(task)
+            except Exception:
+                pass
+            try:
+                log.info(f"_run_async._on_finished: received; result_type={type(result).__name__ if result is not None else 'None'}, error={'None' if not error else str(error)}")
+            except Exception:
+                pass
+            # Directly invoke the provided callback with AsyncResponse, as before
+            if result is not None and isinstance(result, AsyncResponse):
                 callback(result)
                 return
-            
+
             if error:
                 if isinstance(error, Exception):
                     callback(AsyncResponse(error=error))
-                    return
                 else:
                     callback(AsyncResponse(error=Exception(str(error))))
-                    return
-                
+                return
+
             callback(AsyncResponse(result=result))
             
         task.signals.finished.connect(_on_finished)
@@ -113,19 +145,59 @@ class MasterAPI(QObject):
 
     async def generate_2d(self, token:str, gen2dInput:Gen2dInput):
         log.info("Generating 2d. Endpoint: " + self.API_BASE_URL+"/tools/v1/pic_generator")
-        
-        response = requests.post(f"{self.API_BASE_URL}/tools/v1/pic_generator", json={
+        # Build payload without None fields to avoid backend hangs on nulls
+        payload = {
             "image_base64": gen2dInput.image_base64,
-            "prompt":  gen2dInput.prompt,
-            "negative_prompt": gen2dInput.negative_prompt,
+            "prompt": gen2dInput.prompt,
             "control_strength": gen2dInput.control_strength,
-            "seed": gen2dInput.seed,
-        }, headers={"Authorization": f"Bearer {token}"})
+        }
+        if gen2dInput.negative_prompt is not None:
+            payload["negative_prompt"] = gen2dInput.negative_prompt
+        if gen2dInput.seed is not None:
+            payload["seed"] = gen2dInput.seed
+
+        response = requests.post(
+            f"{self.API_BASE_URL}/tools/v1/pic_generator",
+            json=payload,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=50,
+        )
+        
+        # Log ALL response from the server (status, headers, body in chunks)
+        try:
+            log.info(f"generate_2d HTTP {response.status_code}, elapsed={getattr(response, 'elapsed', None)}")
+            try:
+                headers_dict = dict(response.headers)
+                log.info(f"generate_2d headers: {headers_dict}")
+            except Exception:
+                pass
+            body_text = response.text or ""
+            log.info(f"generate_2d body length: {len(body_text)}")
+            if body_text:
+                chunk_size = 100
+                for i in range(len(body_text)-chunk_size, len(body_text), chunk_size):
+                    end = min(i+chunk_size, len(body_text))
+                    log.info(f"generate_2d body chunk {i}-{end}: {body_text[i:end]}")
+        
+        except Exception as e:
+            log.error(f"generate_2d: failed to log full response: {e}")
         
         try:
-            return Gen2dResult(**response.json())
+            data = response.json()
         except Exception as e:
-            raise Exception(response.text)     
+            log.error(f"gen2d: failed to parse json, text starts: {response.text[:200]}")
+            raise Exception(response.text)
+        # Guard: ensure image_base64 present to avoid UI hanging
+        if not isinstance(data, dict) or "image_base64" not in data or not data["image_base64"]:
+            keys_or_type = list(data.keys()) if isinstance(data, dict) else type(data)
+            log.error(f"gen2d: invalid response: missing image_base64, keys={keys_or_type}")
+            raise Exception("Invalid response: missing image_base64")
+        try:
+            log.info(f"gen2d: image_base64 len={len(data.get('image_base64', ''))}")
+        except Exception:
+            pass
+        
+        return Gen2dResult(**data)
         
             
     async def generate_3d(self, token:Token, gen3dInput:Gen3dInput):
@@ -136,7 +208,7 @@ class MasterAPI(QObject):
             return Gen3dId(**response.json())
         except:
             raise Exception(response.text)
-    async def remove_background_pipeline(self, token, removeBackgroundInput:RemoveBackgroundInput):
+    async def remove_background_pipeline(self, token: Token, removeBackgroundInput:RemoveBackgroundInput):
         response = requests.post(self.API_BASE_URL+"/tools/v1/remove-background-pipeline", 
             json=removeBackgroundInput.model_dump(),
             headers={"Authorization": f"{token.token_type} {token.access_token}"})
@@ -145,19 +217,30 @@ class MasterAPI(QObject):
         except Exception as e:
             raise Exception(response.text)
         
-    async def remove_background(self, token, removeBackgroundInput:RemoveBackgroundInput):
-        response = requests.post(self.API_BASE_URL+"/tools/v1/remove-background", 
-            json=removeBackgroundInput.model_dump(),
-            headers={"Authorization": f"{token.token_type} {token.access_token}"})
+    async def remove_background(self, token: Token, removeBackgroundInput:RemoveBackgroundInput):
+        payload = removeBackgroundInput.model_dump()
+        # Strip None fields explicitly
+        payload = {k: v for k, v in payload.items() if v is not None}
+        response = requests.post(
+            self.API_BASE_URL+"/tools/v1/remove-background",
+            json=payload,
+            headers={"Authorization": f"{token.token_type} {token.access_token}"},
+            timeout=30,
+        )
         try:
             return Gen2dResult(**response.json())
         except Exception as e:
             raise Exception(response.text)
         
     async def clear_background(self, token, clearBackgroundInput:ClearBackgroundInput):
-        response = requests.post(self.API_BASE_URL+"/tools/v1/clear-background", 
-            json=clearBackgroundInput.model_dump(),
-            headers={"Authorization": f"{token.token_type} {token.access_token}"})
+        payload = clearBackgroundInput.model_dump()
+        payload = {k: v for k, v in payload.items() if v is not None}
+        response = requests.post(
+            self.API_BASE_URL+"/tools/v1/clear-background",
+            json=payload,
+            headers={"Authorization": f"{token.token_type} {token.access_token}"},
+            timeout=30,
+        )
         try:
             return Gen2dResult(**response.json())
         except Exception as e:
@@ -167,7 +250,7 @@ class MasterAPI(QObject):
         url = self.API_BASE_URL + "/tools/v1/get-object"
         headers = {"Authorization": f"{token.token_type} {token.access_token}"}
         try:
-            response = requests.post(url, json=obj_id.model_dump(), headers=headers)
+            response = requests.post(url, json=obj_id.model_dump(), headers=headers, timeout=30)
             response.raise_for_status()  # Raise an error if not a 2xx status
             data = response.json()
             return Gen3dResult(**data)
