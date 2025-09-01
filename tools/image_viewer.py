@@ -44,17 +44,27 @@ class ImageViewer(QWidget):
         # фон = системный
         self.setAutoFillBackground(True)
         
-        self.setMinimumSize(100, self._scaled.height())
+        # self.setMinimumSize(100, self._scaled.height())
+        
+        # Инициализируем базовый масштаб и центрирование
+        # Это будет пересчитано в resizeEvent, но установим начальные значения
+        self._base_scale = 1.0
+        self._target_scale = 1.0
+        self._scale = 1.0
         
 
     # ───────────────────── геометрия и центрирование ──────────────────
     def _fit_scale(self) -> float:
-        "Вписываем оригинал в текущее окно, сохраняем пропорции."
+        "Вписываем оригинал в текущее окно, сохраняем пропорции. Масштабируем по наибольшему направлению."
         if self.width() == 0 or self.height() == 0:
             return 1.0
-        return min(self.width() / self._pix_orig.width(),
-                   self.height() / self._pix_orig.height(),
-                   1.0)
+        
+        # Вычисляем масштаб для вписывания изображения в окно
+        scale_x = self.width() / self._pix_orig.width()
+        scale_y = self.height() / self._pix_orig.height()
+        
+        # Используем НАИБОЛЬШИЙ масштаб, чтобы изображение заполнило окно по наибольшему направлению
+        return min(scale_x, scale_y)
 
     def _clamp_target_offset(self) -> None:
         """
@@ -65,20 +75,26 @@ class ImageViewer(QWidget):
         pw, ph = self._pix_orig.width() * self._target_scale, \
                  self._pix_orig.height() * self._target_scale
         cw, ch = self.width(), self.height()
+        
+        print(f"_clamp_target_offset: pix_size=({pw}, {ph}), container_size=({cw}, {ch})")
 
         # по X
         if pw <= cw:                                     # картинка уже окна
             self._target_off.setX((cw - pw) * 0.5)       # центр
+            print(f"X: centering, offset_x={(cw - pw) * 0.5}")
         else:
             min_x = cw - pw
             self._target_off.setX(max(min_x, min(self._target_off.x(), 0)))
+            print(f"X: clamping, offset_x={self._target_off.x()}")
 
         # по Y
         if ph <= ch:
             self._target_off.setY((ch - ph) * 0.5)
+            print(f"Y: centering, offset_y={(ch - ph) * 0.5}")
         else:
             min_y = ch - ph
             self._target_off.setY(max(min_y, min(self._target_off.y(), 0)))
+            print(f"Y: clamping, offset_y={self._target_off.y()}")
 
     # ────────────────────────── события ──────────────────────────────
     def wheelEvent(self, ev: QWheelEvent) -> None:
@@ -110,14 +126,17 @@ class ImageViewer(QWidget):
 
     def resizeEvent(self, _) -> None:
         "Обновить базовый масштаб и центрировать."
+        print(f"ImageViewer resizeEvent: width={self.width()}, height={self.height()}")
         old_base = self._base_scale
         self._base_scale = self._fit_scale()
+        print(f"ImageViewer: base_scale={self._base_scale}")
         if old_base:
             coef = self._base_scale / old_base
             self._scale        *= coef
             self._target_scale *= coef
         self._update_scaled()
         self._clamp_target_offset()
+        print(f"ImageViewer: target_offset=({self._target_off.x()}, {self._target_off.y()})")
 
     # ───────────────────── анимация (lerp) ───────────────────────────
     def _lerp(self, a: float, b: float) -> float:
@@ -151,12 +170,12 @@ class ImageViewer(QWidget):
         p.drawPixmap(self._offset, self._scaled)
 
 # import FreeCADGui
-# from tools.full_view import FullViewWindowData
+# from tools.full_view import FullViewWindowData, FullViewWindow
 # mv = FreeCADGui.getMainWindow()
 # dock = FullViewWindow()
 # mv.addDockWidget(Qt.LeftDockWidgetArea, dock)
 # mv.show()
-# full_view_image_interactable = ImageViewer("/Users/dmitry057/Pictures/the-game-location-that-looks-like-neural-connections-.png")
+# full_view_image_interactable = ImageViewer("/Users/dmitry057/Pictures/face.jpg")
 # fd = FullViewWindowData(
 #     interactable=full_view_image_interactable,
 #     buttons = [

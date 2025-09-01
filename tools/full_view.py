@@ -2,7 +2,7 @@ import FreeCADGui
 from PySide.QtCore import Qt, QObject, Signal, QEvent
 from PySide.QtGui import QPixmap, QPainter, QPainterPath, QWheelEvent
 from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDialog,
-                              QPushButton, QHBoxLayout, QDockWidget, QTabWidget, QApplication) # Added QApplication
+                              QPushButton, QHBoxLayout, QDockWidget, QTabWidget, QApplication, QSizePolicy) # Added QApplication
 
 from PySide.QtCore import QTimer, QPoint
 from PySide.QtCore import Qt
@@ -55,6 +55,13 @@ class FullViewWindow(QDockWidget):
         # Set initial allowed area (can be changed later if needed)
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.BottomDockWidgetArea | Qt.TopDockWidgetArea)
         self.setFloating(False) # Usually starts docked
+        
+        # Set size policy to allow some flexibility but prevent excessive stretching
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        
+        # Set reasonable size limits
+        self.setMinimumSize(400, 300)
+        self.setMaximumSize(800, 600)
 
         self._initialized = True # Mark as initialized
 
@@ -71,9 +78,12 @@ class FullViewWindow(QDockWidget):
 
         # Layout for buttons
         self.button_container_widget = QWidget() # Use a widget container for the HBox
+        self.button_container_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed) # Fixed height
+        self.button_container_widget.setMaximumHeight(50) # Limit maximum height
         self.button_container_layout = QHBoxLayout(self.button_container_widget)
         self.button_container_layout.setContentsMargins(5, 5, 5, 5) # Some margins for buttons
-        self.layout.addWidget(self.button_container_widget, 0) # Stretch factor 0
+        self.button_container_layout.setSpacing(5) # Add spacing between buttons
+        self.layout.addWidget(self.button_container_widget, 0, Qt.AlignBottom) # Stretch factor 0, align to bottom
 
     def _clear_content(self):
         """Removes the current interactable widget and buttons."""
@@ -106,10 +116,10 @@ class FullViewWindow(QDockWidget):
         self.interactable = data.interactable
         self.buttons_data = data.buttons if data.buttons else []
 
-        # Insert interactable widget before the button container
-        self.layout.insertWidget(0, self.interactable, 1) # Index 0, stretch factor 1
+        # Add interactable widget first (takes all available space)
+        self.layout.insertWidget(0, self.interactable, 1) # Index 0, stretch factor 1 - take all available space
 
-        # Add buttons if any
+        # Add buttons (at the bottom)
         if self.buttons_data:
             for button_data in self.buttons_data:
                 button_widget = QPushButton(button_data.name)
@@ -196,6 +206,18 @@ class FullView3DInteractable(QWidget):
         super(FullView3DInteractable, self).__init__(parent)
         self.viewer = View3DWindow(view3dData)
         self.container = QWidget.createWindowContainer(self.viewer)
+        
+        # Set size policy to prevent stretching
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        # Set reasonable size limits
+        self.setMinimumSize(400, 300)
+        self.setMaximumSize(800, 600)
+        
+        # Set initial size
+        self.resize(500, 400)
+        
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.container)
         self.setLayout(self.layout)
@@ -216,10 +238,30 @@ class FullViewImageInteractable(QWidget):
         super(FullViewImageInteractable, self).__init__(parent)
         self.setWindowTitle("Полный просмотр")
         self.viewer = ImageViewer(path)
+        
+        # Set size policy to prevent stretching
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.viewer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        # Set reasonable size limits
+        self.setMinimumSize(400, 300)
+        self.setMaximumSize(800, 600)
+        
+        # Set initial size
+        self.resize(500, 400)
+        
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.viewer)
         self.setLayout(self.layout)
         self.viewer.show()
+        
+        # Принудительно обновляем размеры и центрирование после показа
+        QTimer.singleShot(100, self._update_viewer_layout)
+    
+    def _update_viewer_layout(self):
+        """Обновляет размеры и центрирование ImageViewer после показа."""
+        if self.viewer:
+            self.viewer.resizeEvent(None)  # Принудительно вызываем resizeEvent
 
 
 
