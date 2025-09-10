@@ -55,8 +55,8 @@ class View3DStyle(BaseModel):
     should_rotate: bool = True
     rotation_speed: int = 10_000  # ms per revolution
 
-    light_intensity: float = 1.4
-    light_color: QColor = QColor.fromRgbF(1.0, 1.0, 0.7)
+    light_intensity: float = 1
+    light_color: QColor = QColor.fromRgbF(1.0, 1.0, 1.0)
     light_direction: QVector3D = QVector3D(-1.0, -1.0, -1.0)
 
     camera_position: QVector3D = QVector3D(0.0, 1.0, 3.0)
@@ -66,12 +66,12 @@ class View3DStyle(BaseModel):
     camera_near_plane: float = 0.1
     camera_far_plane: float = 1_000.0
 
-    background_color: QColor = QColor(120, 120, 120)
+    background_color: QColor = QColor(60, 60, 60)
 
     # grid
     grid_size: float = 50.0
     grid_divisions: int = 200
-    grid_color: QColor = QColor(80, 80, 150)  # Bright white for better visibility
+    grid_color: QColor = QColor(80, 80, 80)  # Bright white for better visibility
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -165,6 +165,10 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
 
         self.defaultFrameGraph().setClearColor(self.style.background_color)
         self.setTitle("3D Preview")
+        
+        # Create independent frame graph to prevent lighting conflicts between windows
+        # This ensures each window maintains its own lighting state
+        self._setupIndependentFrameGraph()
 
         # camera ----------------------------------------------------------
         cam = self.camera()
@@ -182,12 +186,19 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         self.setRootEntity(self.root)
 
         # lighting --------------------------------------------------------
-        light_ent = Qt3DCore.QEntity(self.root)  # type: ignore[name-defined]
-        light = Qt3DRender.QDirectionalLight(light_ent)  # type: ignore[attr-defined]
-        light.setWorldDirection(self.style.light_direction)
-        light.setColor(self.style.light_color)
-        light.setIntensity(self.style.light_intensity)
-        light_ent.addComponent(light)
+        # Create independent lighting for this window to prevent conflicts with other windows
+        self.light_ent = Qt3DCore.QEntity(self.root)  # type: ignore[name-defined]
+        self.light = Qt3DRender.QDirectionalLight(self.light_ent)  # type: ignore[attr-defined]
+        self.light.setWorldDirection(self.style.light_direction)
+        self.light.setColor(self.style.light_color)
+        self.light.setIntensity(self.style.light_intensity)
+        
+        # Ensure light stays active across multiple windows by setting it as enabled explicitly
+        # This prevents the light from being disabled when new 3D windows are opened
+        self.light.setEnabled(True)
+        
+        # Store reference to prevent garbage collection and maintain independent lighting
+        self.light_ent.addComponent(self.light)
 
         # helpers ---------------------------------------------------------
         self._create_grid()
@@ -254,6 +265,35 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         super().wheelEvent(event)
 
     # ── helpers ──────────────────────────────────────────────────────────
+
+    def _setupIndependentFrameGraph(self):
+        """Setup an independent frame graph to prevent lighting conflicts between multiple windows."""
+        try:
+            # Create a new frame graph root to isolate this window's rendering
+            from PySide.Qt3DRender import Qt3DRender  # type: ignore
+            
+            frame_graph = Qt3DRender.QRenderSurfaceSelector()  # type: ignore[attr-defined]
+            frame_graph.setSurface(self)
+            
+            # Create viewport
+            viewport = Qt3DRender.QViewport(frame_graph)  # type: ignore[attr-defined]
+            viewport.setNormalizedRect(Qt3DCore.QRectF(0.0, 0.0, 1.0, 1.0))  # type: ignore[name-defined]
+            
+            # Create camera selector
+            camera_selector = Qt3DRender.QCameraSelector(viewport)  # type: ignore[attr-defined]
+            camera_selector.setCamera(self.camera())
+            
+            # Create clear buffer
+            clear_buffer = Qt3DRender.QClearBuffers(camera_selector)  # type: ignore[attr-defined]
+            clear_buffer.setBuffers(Qt3DRender.QClearBuffers.ColorDepthBuffer)  # type: ignore[attr-defined]
+            clear_buffer.setClearColor(self.style.background_color)
+            
+            # Set the custom frame graph
+            self.setActiveFrameGraph(frame_graph)
+            
+        except (ImportError, AttributeError):
+            # Fallback if frame graph setup fails - just use default
+            pass
 
     def _create_material(self):
         material = Qt3DExtras.QDiffuseSpecularMapMaterial(self.root)
@@ -345,10 +385,22 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
 
     # ── cleanup ─────────────────────────────────────────────────────────
 
+    def ensureLightEnabled(self):
+        """Ensure the directional light remains enabled - call this if light gets disabled."""
+        if hasattr(self, 'light') and self.light:
+            self.light.setEnabled(True)
+    
     def closeEvent(self, event):  # noqa: D401 – Qt naming convention
         if hasattr(self, "_anim"):
             self._anim.stop()
             self._anim.deleteLater()
+        
+        # Clean up lighting components
+        if hasattr(self, 'light'):
+            self.light.deleteLater()
+        if hasattr(self, 'light_ent'):
+            self.light_ent.deleteLater()
+            
         self.controller.deleteLater()
         super().closeEvent(event)
 

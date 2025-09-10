@@ -56,8 +56,11 @@ class TouchTopNotchAuth:
                     # Update refresh_token in keyring
                     new_refresh = data.get("refresh_token")
                     if new_refresh:
-                        keyring.set_password(self.APP_NAME, "refresh_token", new_refresh)
-                        log.info("💾 Updated refresh_token in keyring")
+                        try:
+                            keyring.set_password(self.APP_NAME, "refresh_token", new_refresh)
+                            log.info("💾 Updated refresh_token in keyring")
+                        except Exception as e:
+                            log.warning(f"⚠️ Failed to update refresh_token in keyring: {e}")
                     self.access_token = data.get("access_token")
                     self.refresh_token = new_refresh
                     log.info(f"🎯 Access token obtained: {self.access_token[:20] if self.access_token else 'None'}...")
@@ -113,13 +116,19 @@ class TouchTopNotchAuth:
         if response.status_code == 200:
             log.info("✅ Login successful!")
             # Save only username (don't save password for security)
-            keyring.set_password(self.APP_NAME, "username", username)
+            try:
+                keyring.set_password(self.APP_NAME, "username", username)
+            except Exception as e:
+                log.warning(f"⚠️ Failed to save username to keyring: {e}")
             # Save refresh_token for future auto-logins
             try:
                 data = response.json()
                 rt = data.get("refresh_token")
                 if rt:
-                    keyring.set_password(self.APP_NAME, "refresh_token", rt)
+                    try:
+                        keyring.set_password(self.APP_NAME, "refresh_token", rt)
+                    except Exception as e:
+                        log.warning(f"⚠️ Failed to save refresh_token to keyring: {e}")
                 self.access_token = data.get("access_token")
                 self.refresh_token = rt
             except Exception:
@@ -332,17 +341,23 @@ class TouchTopNotchAuth:
                             log.info(f"📧 Email: {user_info.get('email', 'N/A')}")
                             log.info(f"👨‍💼 Full name: {user_info.get('full_name', 'N/A')}")
                             
-                            # Save refresh_token for auto-login
+                            # Save refresh_token for auto-login (best-effort)
                             if refresh_token:
                                 log.info("\n💾 Saving refresh_token for auto-login...")
-                                keyring.set_password(self.APP_NAME, "refresh_token", refresh_token)
-                                log.info("✅ Refresh token saved to keyring")
+                                try:
+                                    keyring.set_password(self.APP_NAME, "refresh_token", refresh_token)
+                                    log.info("✅ Refresh token saved to keyring")
+                                except Exception as e:
+                                    log.warning(f"⚠️ Failed to save refresh_token to keyring: {e}")
                             
-                            # Save username for convenience
+                            # Save username for convenience (best-effort)
                             username = user_info.get('username')
                             if username:
-                                keyring.set_password(self.APP_NAME, "username", username)
-                                log.info(f"💾 Username saved to keyring: {username}")
+                                try:
+                                    keyring.set_password(self.APP_NAME, "username", username)
+                                    log.info(f"💾 Username saved to keyring: {username}")
+                                except Exception as e:
+                                    log.warning(f"⚠️ Failed to save username to keyring: {e}")
                             
                             self.access_token = access_token
                             self.refresh_token = refresh_token
@@ -363,8 +378,9 @@ class TouchTopNotchAuth:
                             log.info(f"⏳ Still waiting... ({elapsed}s elapsed)")
                         continue
                     except Exception as e:
-                        log.error(f"❌ Error receiving message: {e}")
-                        break
+                        # Do not abort the flow due to non-fatal errors (e.g., keychain write issues)
+                        log.warning(f"⚠️ Non-fatal error while handling message: {e}")
+                        continue
                 
                 log.info(f"\n⏰ Token wait timeout ({timeout} seconds)")
                 log.error("❌ Token not received automatically")
