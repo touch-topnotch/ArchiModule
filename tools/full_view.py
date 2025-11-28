@@ -83,7 +83,7 @@ class FullViewWindow(QDockWidget):
         self.button_container_layout = QHBoxLayout(self.button_container_widget)
         self.button_container_layout.setContentsMargins(5, 5, 5, 5) # Some margins for buttons
         self.button_container_layout.setSpacing(5) # Add spacing between buttons
-        self.layout.addWidget(self.button_container_widget, 0, Qt.AlignBottom) # Stretch factor 0, align to bottom
+        self.layout.addWidget(self.button_container_widget, 0, Qt.AlignmentFlag.AlignBottom) # Stretch factor 0, align to bottom
 
     def _clear_content(self):
         """Removes the current interactable widget and buttons."""

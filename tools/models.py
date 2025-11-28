@@ -75,16 +75,36 @@ class Gen2dResult(BaseModel):
     image_base64: str
 
 class Gen3dInput(BaseModel):
-    image_base64: str
+    # Multi-image mode support
+    front: Optional[str] = None
+    back: Optional[str] = None
+    left: Optional[str] = None
+    right: Optional[str] = None
+    other: Optional[str] = None
+    
+    # Legacy single image mode (kept for backward compatibility)
+    image_base64: Optional[str] = None
+    
+    # 3D generation parameters (from test_hitem3d.py)
+    # resolution может быть строкой качества ("low", "medium", "high", "ultra") или числом ("512", "1024", "1536", "1536 Pro")
+    resolution: Optional[str] = "low"  # Model resolution: "low" (512), "medium" (1024), "high" (1536), "ultra" (1536 Pro)
+    # face может быть строкой качества ("low", "high", "ultra") или числом (100000, 1000000, 2000000)
+    face: Optional[str] = "low"  # Number of polygons: "low" (100000), "high" (1000000), "ultra" (2000000)
 
 class Gen3dId(BaseModel):
-    obj_id: str
+    # New API uses task_id, but keep obj_id for backward compatibility
+    task_id: Optional[str] = None
+    obj_id: Optional[str] = None
+    
+    def get_id(self) -> str:
+        """Returns task_id if available, otherwise obj_id"""
+        return self.task_id or self.obj_id or ""
 
 class Gen3dModel(BaseModel):
-    glb_url: str
-    fbx_url: str
-    usdz_url: str
-    obj_url: str
+    glb_url: Optional[str] = ""
+    fbx_url: Optional[str] = ""
+    usdz_url: Optional[str] = ""
+    obj_url: Optional[str] = ""
 
 class Gen3dTexture(BaseModel):
     base_color_url: str
@@ -96,6 +116,7 @@ class Gen3dResult(BaseModel):
     progress: int
     object: Optional[Gen3dModel] = None
     texture: Optional[Gen3dTexture] = None
+    estimated_time: Optional[int] = None  # Estimated time in seconds (from Obj3dResult API model)
 
 class Gen3dSaved(BaseModel):
     local: Optional[Gen3dResult] = None

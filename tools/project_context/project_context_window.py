@@ -12,14 +12,15 @@ from tools.view_3d import View3DStyle
 from tools.authentication.authentication import AuthenticatedSession
 from tools.master_api import MasterAPI
 from tools.models import Gen3dId, Gen3dSaved
-from tools.gallery_utils import (ImageCell, View3DCell, 
+from tools.project_context.utils.gallery_utils import (ImageCell, View3DCell, 
                                 GalleryStyle, GalleryWidget, select_images)
 from tools.full_view import (FullViewWindow, FullViewImageInteractable, FullView3DInteractable,
                             FullViewButtonData, FullViewWindowData)
 import tools.exporting as exporting
+import tools.log as log
 from tools.project_context.utils.project_behaviour_base import ProjectBehaviour
 from tools.project_context.pipelines.prepare_for_3d_gen import PrepareFor3dGen
-from tools.project_context.pipelines.download_model_behaviour import DownloadModelBehaviour
+from tools.project_context.pipelines.download_3d_behaviour import DownloadModelBehaviour
 from tools.project_context.pipelines.prepare_for_2d_gen import PrepareFor2dGen
 from tools.project_context.pipelines.gen_2d_behaviour import Generate2dBehaviour
 
@@ -367,11 +368,17 @@ class ProjectContextWindow(QDockWidget):
         """Handle callback when a 3D model ID is generated."""
         if error or result is None:
             return
+        
+        # Используем get_id() для получения task_id или obj_id (API returns task_id, not obj_id)
+        task_id = result.get_id()
+        if not task_id:
+            log.warning("on_obj_id_generated: No task_id or obj_id in result")
+            return
             
         saved = Gen3dSaved(
             local=None,
             online=None,
-            obj_id=result.obj_id
+            obj_id=task_id  # Используем get_id() результат (task_id из API)
         )
         
         exporting.save_arr_item("generations3d", saved.model_dump())

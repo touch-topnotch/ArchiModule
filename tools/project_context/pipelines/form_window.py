@@ -1,14 +1,15 @@
 import FreeCADGui
 from PySide.QtWidgets import QDockWidget, QFormLayout, QWidget
 from PySide.QtCore import Qt
+from typing import Optional
 import FreeCAD # Import for PrintMessage
-
+from tools import log
 class FormWindow(QDockWidget):
     """
     Base class for dockable windows with a QFormLayout,
     automatically sized and centered relative to the FreeCAD main window.
     """
-    def __init__(self, title: str = "Form Window", parent: QWidget = None, width_ratio: float = 0.6, height_ratio: float = 0.8):
+    def __init__(self, title: str = "Form Window", parent: Optional[QWidget] = None, width_ratio: float = 0.6, height_ratio: float = 0.8):
         """
         Initializes the FormWindow.
 
@@ -64,7 +65,7 @@ class FormWindow(QDockWidget):
             raise
 
     # Optionally, add a method to easily add rows to the form layout
-    def addRow(self, label: str | QWidget, field: QWidget = None):
+    def addRow(self, label: str | QWidget, field: Optional[QWidget] = None):
         """Convenience method to add a row to the internal formLayout."""
         # Need to check if formLayout exists if we are bypassing init steps
         if not hasattr(self, 'formLayout') or not self.formLayout:
@@ -72,6 +73,6 @@ class FormWindow(QDockWidget):
              return
 
         if field is None:
-            self.formLayout.addRow(label) # Handle spanning widget case
+            self.formLayout.addRow(label)  # type: ignore[arg-type]
         else:
-            self.formLayout.addRow(label, field) 
+            self.formLayout.addRow(label, field)  # type: ignore[arg-type] 

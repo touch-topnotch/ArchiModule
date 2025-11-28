@@ -10,7 +10,7 @@ from PySide.QtWidgets import QLineEdit, QMessageBox, QWidget
 from tools.authentication import AuthenticatedSession
 from tools.master_api import MasterAPI
 from tools import models as Models
-from tools.gallery_utils import GalleryWidget, ImageCell, AnimatedCell, LoadingCell
+from tools.project_context.utils.gallery_utils import GalleryWidget, ImageCell, AnimatedCell, LoadingCell
 from tools.full_view import (FullViewWindow, FullViewWindowData, 
                            FullViewImageInteractable, FullViewButtonData)
 from tools.project_context.utils.project_behaviour_base import ProjectBehaviour
@@ -35,8 +35,36 @@ class Generate2dBehaviour(ProjectBehaviour):
     Handles the selection of sketches, generation of 2D renders, and display in the gallery.
     """
     estimated_generation_time_seconds: int = 25
-    additional_positive_prompt = " ultra-realistic cinematic lighting, sun light, vibrant natural color palette, crisp clarity, high dynamic range, professional photographic framing, depth and dimension, subtle lens effects, focus solely on the main structure with no extraneous details or constructions"
-    additional_negative_prompt = " flat lighting, dull colors, unnatural glow, excessive bloom, digital artifacts, artificial noise, oversharpening, distorted proportions, cartoonish flatness, lens distortion, moiré patterns, background clutter, extra structures, unnecessary details"
+    additional_positive_prompt = """
+    Single isolated futuristic tower in the center of the frame.
+The same unique sculptural building on all views.
+
+The building is made of white matte panels with sharp angular folded shapes, 
+almost like origami. Clean continuous planes, no visible floor slabs.
+
+In the middle of the facade there is ONE tall vertical panoramic window,
+a continuous glass slot running from the ground floor to the roof.
+Almost no other windows, only small details inside this central glass slot.
+
+Minimalist architectural concept style:
+white building, white floor, white or very light grey background,
+soft neutral lighting, very clean lines, almost like a sketch or model render.
+No reflections of a city on the glass.
+
+The scene is empty: no other buildings close to it, no trees, no grass,
+no cars, no people, no street furniture, no text, no logos.
+Focus only on the geometry of this single tower.
+High clarity, sharp edges, perfect symmetry where visible.
+Suitable as reference for 3D reconstruction.
+    """ # " ultra-realistic cinematic lighting, sun light, vibrant natural color palette, crisp clarity, high dynamic range, professional photographic framing, depth and dimension, subtle lens effects, focus solely on the main structure with no extraneous details or constructions"
+    additional_negative_prompt = """
+    generic modern office tower, typical 2010s skyscraper, 
+curtain wall glass tower, blue mirrored glass, strong reflections,
+dense city background, skyline, other high-rises,
+trees, grass, park, cars, buses, people, crowd, street lights, benches,
+billboards, text, logos, advertisements,
+complex shadows, dramatic lighting, fog, haze, film grain, dirt, damage
+    """ # flat lighting, dull colors, unnatural glow, excessive bloom, digital artifacts, artificial noise, oversharpening, distorted proportions, cartoonish flatness, lens distortion, moiré patterns, background clutter, extra structures, unnecessary details"
    
     def __init__(self,
                  authSession: AuthenticatedSession,
@@ -70,6 +98,7 @@ class Generate2dBehaviour(ProjectBehaviour):
         self.prompt_edit = prompt_edit
         self.full_view = full_view
         self.gen_stack: List[int] = []
+        self.selectBestSketch: Optional[PrepareFor2dGen] = None
         
         # Create and show sketch selection dialog
         self._show_sketch_selector()
@@ -132,7 +161,7 @@ class Generate2dBehaviour(ProjectBehaviour):
         
         # Start generation API call
         if(self.authSession.is_authenticated()):
-            token = self.authSession.token.access_token
+            token = self.authSession.token
         else:
             log.info("Gen2dBehaviour.generate_render: Starting auto login")
             def on_auto_login(response: AsyncResponse):
@@ -187,7 +216,8 @@ class Generate2dBehaviour(ProjectBehaviour):
         exporting.save_prop("negative_prompt", gen2dInput.negative_prompt)
         exporting.save_prop("slider_value", gen2dInput.control_strength)
         
-        self.prompt_edit.setText(gen2dInput.prompt)
+        if hasattr(self.prompt_edit, 'setText'):
+            self.prompt_edit.setText(gen2dInput.prompt)
     
    
     
@@ -329,8 +359,8 @@ class Generate2dBehaviour(ProjectBehaviour):
         """Destructor to print a message when the object is deleted."""
         log.info(f"Generate2dBehaviour instance {id(self)} being deleted.\n")
         # Ensure any owned widgets like the dialog are closed/deleted if necessary
-        if self.selectBestSketch:
-            self.selectBestSketch.close() # Try closing it first
+        if hasattr(self, 'selectBestSketch') and self.selectBestSketch:
+            self.selectBestSketch.close()
             self.selectBestSketch.deleteLater()
 
     def _on_response_received(self, response):

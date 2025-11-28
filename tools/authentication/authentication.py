@@ -32,6 +32,7 @@ class TouchTopNotchAuth:
     def __init__(self):
         self.access_token = None
         self.refresh_token = None
+        self.token_type = "Bearer"  # По умолчанию Bearer
         self.user_info = None
         log.info(f"🔐 TouchTopNotchAuth initialized with API: {self.API_BASE_URL}")
         log.info(f"🔌 WebSocket URL: {self.WEBSOCKET_URL}")
@@ -63,7 +64,10 @@ class TouchTopNotchAuth:
                             log.warning(f"⚠️ Failed to update refresh_token in keyring: {e}")
                     self.access_token = data.get("access_token")
                     self.refresh_token = new_refresh
+                    # Сохраняем token_type из ответа сервера, если он есть
+                    self.token_type = data.get("token_type", "Bearer")
                     log.info(f"🎯 Access token obtained: {self.access_token[:20] if self.access_token else 'None'}...")
+                    log.info(f"🎯 Token type: {self.token_type}")
                     return data
                 else:
                     log.warning(f"❌ refresh_token invalid: {response.status_code} - {response.text}")
@@ -92,7 +96,10 @@ class TouchTopNotchAuth:
                         log.info("💾 Saved refresh_token for future auto-logins")
                     self.access_token = data.get("access_token")
                     self.refresh_token = rt
+                    # Сохраняем token_type из ответа сервера, если он есть
+                    self.token_type = data.get("token_type", "Bearer")
                     log.info(f"🎯 Access token obtained: {self.access_token[:20] if self.access_token else 'None'}...")
+                    log.info(f"🎯 Token type: {self.token_type}")
                     return data
                 else:
                     log.warning(f"❌ Auto-login via password failed: {response.status_code} - {response.text}")
@@ -131,6 +138,9 @@ class TouchTopNotchAuth:
                         log.warning(f"⚠️ Failed to save refresh_token to keyring: {e}")
                 self.access_token = data.get("access_token")
                 self.refresh_token = rt
+                # Сохраняем token_type из ответа сервера, если он есть
+                self.token_type = data.get("token_type", "Bearer")
+                log.info(f"🎯 Token type from server: {self.token_type}")
             except Exception:
                 pass
             return response.json()
@@ -362,6 +372,9 @@ class TouchTopNotchAuth:
                             self.access_token = access_token
                             self.refresh_token = refresh_token
                             self.user_info = user_info
+                            # Сохраняем token_type из ответа, если он есть
+                            self.token_type = message_data.get("token_type", "Bearer")
+                            log.info(f"🎯 Token type: {self.token_type}")
                             log.info("🎯 Authentication completed successfully!")
                             return access_token
                         
@@ -609,7 +622,10 @@ class AuthenticatedSession:
         Raises if not authenticated."""
         if not self.auth_service.access_token:
             raise AttributeError("No access token available; user is not authenticated")
-        return Token(access_token=self.auth_service.access_token)
+        # Используем token_type из auth_service, который был получен от сервера
+        token_type = getattr(self.auth_service, 'token_type', 'Bearer')
+        # log.info(f"🔑 Creating Token with type: {token_type}")
+        return Token(access_token=self.auth_service.access_token, token_type=token_type)
 
     def logout(self):
         """Logout the current user."""

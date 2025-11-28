@@ -34,11 +34,10 @@ set(Archi_Python_SRCS
     tools/log.py
     tools/master_api.py
     tools/__init__.py
-    tools/gallery_utils.py
     tools/exporting.py
     tools/project_context/project_context_command.py
     tools/project_context/__init__.py
-    tools/project_context/pipelines/download_model_behaviour.py
+    tools/project_context/pipelines/download_3d_behaviour.py
     tools/project_context/pipelines/form_window.py
     tools/project_context/pipelines/__init__.py
     tools/project_context/pipelines/gen_2d_behaviour.py
@@ -48,11 +47,12 @@ set(Archi_Python_SRCS
     tools/project_context/utils/__init__.py
     tools/project_context/utils/widgets.py
     tools/project_context/utils/project_behaviour_base.py
+    tools/project_context/utils/gallery_utils.py
+    tools/project_context/utils/multiview_widgets.py
     tools/project_context/project_context_window.py
     tools/authentication/__init__.py
     tools/authentication/authentication.py
     tools/authentication/authentication_window.py
-    tools/floor_planner.py
     tools/view_3d.py
     tools/convert_png.py
 )

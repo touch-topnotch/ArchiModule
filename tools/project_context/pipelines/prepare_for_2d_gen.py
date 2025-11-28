@@ -10,7 +10,7 @@ from PySide.QtWidgets import (QLabel, QSlider, QGraphicsOpacityEffect,
                               QTextEdit)
 from tools.project_context.pipelines.form_window import FormWindow
 from tools import exporting, models
-from tools.gallery_utils import GalleryWidget, GalleryStyle, GalleryCell
+from tools.project_context.utils.gallery_utils import GalleryWidget, GalleryStyle, GalleryCell
 
 
 class UIStrings:
@@ -41,7 +41,7 @@ class PrepareFor2dGen(FormWindow):
     Inherits basic window setup and sizing from FormWindow.
     """
     
-    def __init__(self, sketches: GalleryWidget, onApprove: Callable[[models.Gen2dInput], None], parent: QWidget = None):
+    def __init__(self, sketches: GalleryWidget, onApprove: Callable[[models.Gen2dInput], None], parent: Optional[QWidget] = None):
         """
         Initialize the PrepareFor2dGen dialog.
         
@@ -51,7 +51,7 @@ class PrepareFor2dGen(FormWindow):
             parent: Parent widget
         """
         
-        super().__init__(title=UIStrings.WINDOW_TITLE, parent=parent)
+        super().__init__(title=UIStrings.WINDOW_TITLE, parent=parent)  # type: ignore[arg-type]
 
         self.onApprove = onApprove
         self.selected_sketch_path: Optional[str] = None
@@ -70,36 +70,78 @@ class PrepareFor2dGen(FormWindow):
         """Set up the header section with title and subtitle."""
         title_label = QLabel(UIStrings.TITLE)
         title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
-        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         subtitle_label = QLabel(UIStrings.SUBTITLE)
         subtitle_label.setStyleSheet("font-size: 12pt;")
-        subtitle_label.setAlignment(Qt.AlignCenter)
+        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.formLayout.addRow(title_label)
         self.formLayout.addRow(subtitle_label)
         
     def _setup_gallery(self):
-        """Set up the gallery of sketches to choose from."""
+        """Set up the gallery of sketches to choose from.
+        
+        Sizing logic ensures all 3 images fit BOTH horizontally AND vertically:
+        1. Calculate max cell width to fit 3 images by width
+        2. Calculate max cell width to fit 3 images by height (considering aspect ratio)
+        3. Take the MINIMUM to guarantee all 3 images are fully visible
+        """
+        gap = 10
+        num_images = 3
+        number_of_cols = 3
+        
+        # Calculate available space for the gallery
+        available_width = self.advisable_width - 40  # margins
+        available_height = int(self.advisable_height * 0.5)  # gallery takes ~50% of window height
+        
+        # Find the tallest aspect ratio among input images (height/width)
+        max_aspect_ratio = 1.0  # default to square
+        for cell in self.input_sketches_widget.cells:
+            if hasattr(cell, 'pixmap') and cell.pixmap and not cell.pixmap.isNull():
+                w = cell.pixmap.width()
+                h = cell.pixmap.height()
+                if w > 0:
+                    aspect = h / w
+                    max_aspect_ratio = max(max_aspect_ratio, aspect)
+        
+        # Calculate max cell width to fit 3 images horizontally
+        max_width_by_cols = int((available_width - gap * (number_of_cols - 1)) / number_of_cols)
+        
+        # Calculate max cell width to fit images vertically
+        # If we have 3 cols, images stack in 1 row, so height needed = cell_width * aspect_ratio
+        # available_height >= cell_width * max_aspect_ratio
+        # cell_width <= available_height / max_aspect_ratio
+        max_width_by_height = int(available_height / max_aspect_ratio) if max_aspect_ratio > 0 else max_width_by_cols
+        
+        # Take MINIMUM to ensure images fit BOTH ways
+        cell_width = min(max_width_by_cols, max_width_by_height)
+        
+        # Calculate actual gallery height based on cell size
+        estimated_cell_height = int(cell_width * max_aspect_ratio)
+        min_dock_height = estimated_cell_height + gap * 2
+        max_dock_height = max(min_dock_height, available_height)
+        
         style = GalleryStyle(
-            number_of_cols=3, 
-            min_dock_height=int(self.advisable_height * 0.3), 
-            max_dock_height=int(self.advisable_height * 0.5),
-            width_of_cell=int(self.advisable_width / 3.2), 
-            gap=10
+            number_of_cols=number_of_cols, 
+            min_dock_height=min_dock_height, 
+            max_dock_height=max_dock_height,
+            width_of_cell=cell_width, 
+            gap=gap
         )
         
         self.selection_gallery = GalleryWidget(style)
         self.selection_gallery.add_cells([cell.copy() for cell in self.input_sketches_widget.cells])
         
         for cell in self.selection_gallery.cells:
-            cell.action.connect(lambda bound_cell=cell: self._handle_sketch_selection(bound_cell.index))
+            if cell.index is not None:
+                cell.action.connect(lambda bound_cell=cell: self._handle_sketch_selection(bound_cell.index) if bound_cell.index is not None else None)
             
         self.formLayout.addRow(self.selection_gallery)
         
     def _setup_controls(self):
         """Set up the control inputs (slider, prompts)."""
-        self.realism_slider = QSlider(Qt.Horizontal)
+        self.realism_slider = QSlider(Qt.Orientation.Horizontal)
         self.realism_slider.setRange(0, 100)
         initial_slider_value = getattr(self.project_model, 'slider_value', 0.5)
         self.realism_slider.setValue(int(initial_slider_value * 100))
@@ -139,12 +181,15 @@ class PrepareFor2dGen(FormWindow):
         if not self.selection_gallery or index >= len(self.selection_gallery.cells):
             print(f"Warning: Invalid index {index} for sketch selection gallery.")
             return
-        self.selected_sketch_path = self.selection_gallery.cells[index].image_path
         
         selected_cell = self.selection_gallery.cells[index]
-        selected_cell.label.setStyleSheet("border: 3px solid rgba(0, 160, 200, 0.9); border-radius: 15px;")
-        selected_cell.label.setGraphicsEffect(None)
-        selected_cell.label.setWindowOpacity(1.0)
+        if hasattr(selected_cell, 'image_path'):
+            self.selected_sketch_path = selected_cell.image_path  # type: ignore[attr-defined]
+        
+        if hasattr(selected_cell, 'label'):
+            selected_cell.label.setStyleSheet("border: 3px solid rgba(0, 160, 200, 0.9); border-radius: 15px;")  # type: ignore[attr-defined]
+            selected_cell.label.setGraphicsEffect(None)  # type: ignore[attr-defined]
+            selected_cell.label.setWindowOpacity(1.0)  # type: ignore[attr-defined]
         
         for i, cell in enumerate(self.selection_gallery.cells):
             if i != index:
@@ -161,6 +206,9 @@ class PrepareFor2dGen(FormWindow):
             blur: Whether to apply blur (True) or remove it (False).
             opacity: The desired window opacity (e.g., 1.0 for full, 0.5 for semi-transparent).
         """
+        if not hasattr(cell, 'label'):
+            return
+            
         label = cell.label
         if blur:
             current_effect = label.graphicsEffect()
@@ -196,6 +244,9 @@ class PrepareFor2dGen(FormWindow):
             FreeCAD.Console.PrintError(f"\n_handle_approve: Failed to encode selected image: {e}\n")
             return
         
+        if not self.prompt_edit or not self.n_prompt_edit:
+            QMessageBox.critical(self, "Ошибка", "Внутренняя ошибка: элементы UI не инициализированы")
+            return
 
         current_prompt = self.prompt_edit.toPlainText().strip()
 
@@ -210,7 +261,7 @@ class PrepareFor2dGen(FormWindow):
         })
 
         gen2d_input = models.Gen2dInput(
-            image_base64=image_bytes_b64,
+            image_base64=image_bytes_b64.decode('utf-8'),
             prompt=current_prompt,
             control_strength=current_slider_val,
             negative_prompt=current_neg_prompt,
@@ -234,21 +285,30 @@ class PrepareFor2dGen(FormWindow):
             True if all inputs are valid, False otherwise
         """
         if self.selected_sketch_path is None:
+            FreeCAD.Console.PrintWarning("_validate_inputs: No sketch selected\n")
             QMessageBox.warning(self, UIStrings.NO_SKETCH_TITLE, UIStrings.NO_SKETCH_TEXT)
+            return False
+        
+        if not self.prompt_edit or not self.n_prompt_edit:
+            FreeCAD.Console.PrintWarning("_validate_inputs: UI elements not initialized\n")
+            QMessageBox.warning(self, "Ошибка", "Внутренняя ошибка: элементы UI не инициализированы")
             return False
             
         prompt_text = self.prompt_edit.toPlainText().strip()
         if not prompt_text:
+            FreeCAD.Console.PrintWarning("_validate_inputs: Empty prompt\n")
             QMessageBox.warning(self, UIStrings.NO_CONTEXT_TITLE, UIStrings.NO_CONTEXT_TEXT)
             return False
-            
+        
+        # Validate that text can be encoded as UTF-8 (supports all languages including Russian)
         neg_prompt_text = self.n_prompt_edit.toPlainText().strip()
         try:
-            prompt_text.encode('ascii')
-            neg_prompt_text.encode('ascii')
+            prompt_text.encode('utf-8')
+            neg_prompt_text.encode('utf-8')
         except UnicodeEncodeError as e:
             bad_char = e.object[e.start:e.end]
-            QMessageBox.warning(self, UIStrings.INVALID_INPUT_TITLE, f"{UIStrings.INVALID_INPUT_TEXT} Символ: '{bad_char}'")
+            FreeCAD.Console.PrintWarning(f"_validate_inputs: Invalid character '{bad_char}'\n")
+            QMessageBox.warning(self, UIStrings.INVALID_INPUT_TITLE, f"{UIStrings.INVALID_INPUT_TEXT} Слово: '{bad_char}'")
             return False
             
         return True

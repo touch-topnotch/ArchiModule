@@ -63,17 +63,7 @@ try:
     FreeCAD.setLogLevel("ArchiModule", "Trace")  # This enables all log levels
     print(f"Set ArchiModule log level to Trace")
     
-    # Also enable all console message types to ensure visibility
-    FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Log, True)
-    FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Wrn, True)
-    FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Err, True)
-    FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Txt, True)
-    FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Critical, True)
-    FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Notification, True)
-    print("Enabled all console message types")
-    
     # Force refresh to apply changes
-    FreeCAD.Console.refresh()
     print("Console refreshed")
     
     # Test immediate logging
@@ -91,83 +81,12 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
-
-def enableAllLogs():
-    """Enable all log levels in FreeCAD console for ArchiModule."""
-    try:
-        FreeCAD.setLogLevel("ArchiModule", "Trace")
-        FreeCAD.setLogLevel("Default", "Trace")
-        
-        # Enable all message types
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Log, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Wrn, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Err, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Txt, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Critical, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Notification, True)
-        
-        FreeCAD.Console.refresh()
-        print("All ArchiModule logs enabled in FreeCAD console")
-        return True
-    except Exception as e:
-        print(f"Failed to enable FreeCAD logs: {e}")
-        return False
-
-
-def forceEnableLogs():
-    """Force enable all logs using multiple methods."""
-    print("=== Force Enabling All Logs ===")
-    
-    try:
-        # Method 1: Set log levels
-        FreeCAD.setLogLevel("ArchiModule", "Trace")
-        FreeCAD.setLogLevel("Default", "Trace")
-        FreeCAD.setLogLevel("DebugDefault", "Trace")
-        print("✓ Set log levels to Trace")
-        
-        # Method 2: Enable message types
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Log, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Wrn, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Err, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Txt, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Critical, True)
-        FreeCAD.Console.setEnabledMsgType("ConsoleObserverStd", FreeCAD.Console.MsgType_Notification, True)
-        print("✓ Enabled all message types")
-        
-        # Method 3: Force refresh
-        FreeCAD.Console.refresh()
-        print("✓ Console refreshed")
-        
-        # Method 4: Test immediate output
-        FreeCAD.Console.PrintMessage("=== FORCE ENABLE TEST ===\n")
-        FreeCAD.Console.PrintLog("=== FORCE ENABLE LOG TEST ===\n")
-        FreeCAD.Console.PrintWarning("=== FORCE ENABLE WARNING TEST ===\n")
-        FreeCAD.Console.PrintError("=== FORCE ENABLE ERROR TEST ===\n")
-        print("✓ Test messages sent to FreeCAD console")
-        
-        return True
-        
-    except Exception as e:
-        print(f"✗ Force enable failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
 def checkLogStatus():
     """Check the current log status of FreeCAD console."""
     print("=== FreeCAD Console Status ===")
     print(f"ArchiModule log level: {FreeCAD.getLogLevel('ArchiModule')}")
     print(f"Default log level: {FreeCAD.getLogLevel('Default')}")
     print(f"DebugDefault log level: {FreeCAD.getLogLevel('DebugDefault')}")
-    
-    print("\nMessage Types:")
-    print(f"Log: {FreeCAD.Console.isEnabledMsgType('ConsoleObserverStd', FreeCAD.Console.MsgType_Log)}")
-    print(f"Warning: {FreeCAD.Console.isEnabledMsgType('ConsoleObserverStd', FreeCAD.Console.MsgType_Wrn)}")
-    print(f"Error: {FreeCAD.Console.isEnabledMsgType('ConsoleObserverStd', FreeCAD.Console.MsgType_Err)}")
-    print(f"Text: {FreeCAD.Console.isEnabledMsgType('ConsoleObserverStd', FreeCAD.Console.MsgType_Txt)}")
-    print(f"Critical: {FreeCAD.Console.isEnabledMsgType('ConsoleObserverStd', FreeCAD.Console.MsgType_Critical)}")
-    print(f"Notification: {FreeCAD.Console.isEnabledMsgType('ConsoleObserverStd', FreeCAD.Console.MsgType_Notification)}")
     print("=== FreeCAD Console Status Complete ===")
 
 
@@ -266,7 +185,7 @@ def _log(level, module_line_func, msg):
         message = f"{MODULE_NAME}.{module}.{LogLevel.toString(level)}: {msg}"
         
         # Always print to stdout for debugging
-        print(f"[STDOUT] {message}")
+        # print(f"[STDOUT] {message}")
         
         if _useConsole:
             message += "\n"
@@ -333,3 +252,5 @@ def error(msg):
         msg (str): Error message to log
     """
     return _log(LogLevel.ERROR, _caller(), msg)
+
+

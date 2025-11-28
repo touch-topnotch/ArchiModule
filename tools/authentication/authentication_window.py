@@ -57,7 +57,7 @@ class AuthenticationFormWidget(QWidget):
     def init_ui(self, title):
         layout = QVBoxLayout(self)
         label = QLabel(title, self)
-        label.setAlignment(Qt.AlignCenter)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         font = label.font()
         font.setPointSize(16)
         label.setFont(font)

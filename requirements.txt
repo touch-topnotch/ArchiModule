@@ -6,7 +6,7 @@ keyring
 moderngl~=5.7.4
 pyrr~=0.10.3
 scipy~=1.10.0
-openmesh~=1.2.1
+# openmesh~=1.2.1
 PyOpenGL
 pyassimp
 websockets

@@ -55,7 +55,7 @@ def apply_blur_effect(pixmap: QPixmap, radius: int = 80) -> QImage:
     
     # Create an output pixmap with the same size
     blurred_pixmap = QPixmap(pixmap.size())
-    blurred_pixmap.fill(Qt.transparent)  # Ensure transparency is handled
+    blurred_pixmap.fill(Qt.GlobalColor.transparent)  # Ensure transparency is handled
     
     # Render scene to the new pixmap
     painter = QPainter(blurred_pixmap)

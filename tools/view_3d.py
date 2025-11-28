@@ -188,7 +188,7 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         # lighting --------------------------------------------------------
         # Create independent lighting for this window to prevent conflicts with other windows
         self.light_ent = Qt3DCore.QEntity(self.root)  # type: ignore[name-defined]
-        self.light = Qt3DRender.QDirectionalLight(self.light_ent)  # type: ignore[attr-defined]
+        self.light = Qt3DRender.QDirectionalLight(self.light_ent)  
         self.light.setWorldDirection(self.style.light_direction)
         self.light.setColor(self.style.light_color)
         self.light.setIntensity(self.style.light_intensity)
@@ -208,9 +208,15 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         self.model_transform.setScale3D(QVector3D(self.style.model_scale, self.style.model_scale, self.style.model_scale))
         self.model_transform.setTranslation(self.style.model_position)
 
-        self.model_mesh = Qt3DRender.QMesh()  # type: ignore[attr-defined]
-        self.model_mesh.setSource(QUrl.fromLocalFile(str(Path(self.data.object.obj_url))))
+        # Определяем формат файла и выбираем подходящий URL
+        # GLB файлы содержат встроенные текстуры, OBJ требуют внешние текстуры
+        model_file_path = self._get_model_file_path()
+        self.model_file_format = self._detect_file_format(model_file_path)
 
+        self.model_mesh = Qt3DRender.QMesh()  # type: ignore[attr-defined]
+        self.model_mesh.setSource(QUrl.fromLocalFile(str(Path(model_file_path))))
+
+        # Создаем материал в зависимости от формата файла
         self.model_material = self._create_material()
 
         self.model_entity = Qt3DCore.QEntity(self.root)  # type: ignore[name-defined]
@@ -230,7 +236,7 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
     # ── mouse events ─────────────────────────────────────────────────────
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._drag_active = True
             self._last_pos = event.position()
             event.accept()
@@ -250,7 +256,7 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._drag_active = False
             event.accept()
         super().mouseReleaseEvent(event)
@@ -295,14 +301,104 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
             # Fallback if frame graph setup fails - just use default
             pass
 
+    def _get_model_file_path(self) -> str:
+        """Определяет путь к файлу модели, предпочитая OBJ (т.к. GLB не поддерживается Qt3D)."""
+        # Предпочитаем OBJ, так как GLB не поддерживается Qt3D на macOS
+        if self.data.object.obj_url and Path(self.data.object.obj_url).exists():
+            return self.data.object.obj_url
+        elif self.data.object.fbx_url and Path(self.data.object.fbx_url).exists():
+            return self.data.object.fbx_url
+        elif self.data.object.glb_url and Path(self.data.object.glb_url).exists():
+            return self.data.object.glb_url
+        else:
+            # Fallback к obj_url даже если файл не существует (для обработки ошибок)
+            return self.data.object.obj_url or self.data.object.glb_url or ""
+    
+    def _detect_file_format(self, file_path: str) -> str:
+        """Определяет формат файла по расширению."""
+        if not file_path:
+            return "unknown"
+        path = Path(file_path)
+        ext = path.suffix.lower()
+        if ext == ".glb":
+            return "glb"
+        elif ext == ".obj":
+            return "obj"
+        elif ext == ".fbx":
+            return "fbx"
+        elif ext == ".usdz":
+            return "usdz"
+        else:
+            return "unknown"
+    
     def _create_material(self):
+        """Создает материал в зависимости от формата файла."""
+        # GLB файлы содержат встроенные текстуры, поэтому используем простой материал
+        if self.model_file_format == "glb":
+            # Для GLB используем простой материал - текстуры уже встроены в файл
+            material = Qt3DExtras.QPhongMaterial(self.root)
+            material.setAmbient(QColor(200, 200, 200))
+            material.setDiffuse(QColor(255, 255, 255))
+            material.setShininess(0.0)
+            return material
+        
+        # Для OBJ и других форматов ищем внешние текстуры
+        base_color_path = None
+        roughness_path = None
+        
+        # 1. Проверяем текстуры из данных модели
+        if self.data.texture:
+            if self.data.texture.base_color_url:
+                base_color_path = Path(self.data.texture.base_color_url)
+            if self.data.texture.roughness_url:
+                roughness_path = Path(self.data.texture.roughness_url)
+        
+        # 2. Если текстуры не указаны, ищем base_color_texture.png в папке модели
+        # (это стандартное имя после распаковки ZIP архива)
+        if not base_color_path or not base_color_path.exists():
+            model_path = self._get_model_file_path()
+            if model_path:
+                model_folder = Path(model_path).parent
+                # Пробуем найти текстуру по стандартным именам
+                possible_textures = [
+                    model_folder / "base_color_texture.png",  # После распаковки ZIP
+                    model_folder / "material_0.png",  # Оригинальное имя из ZIP
+                    model_folder / "texture.png",
+                    model_folder / "diffuse.png",
+                ]
+                for tex_path in possible_textures:
+                    if tex_path.exists():
+                        base_color_path = tex_path
+                        break
+        
+        # Если текстуры всё ещё нет, используем простой материал
+        if not base_color_path or not base_color_path.exists():
+            material = Qt3DExtras.QPhongMaterial(self.root)
+            material.setAmbient(QColor(200, 200, 200))
+            material.setDiffuse(QColor(255, 255, 255))
+            material.setShininess(0.0)
+            return material
+        
+        # Создаем материал с текстурами
         material = Qt3DExtras.QDiffuseSpecularMapMaterial(self.root)
+        
+        # Загружаем диффузную текстуру (base color)
         diffuse_tex = Qt3DRender.QTextureLoader(material)  # type: ignore[attr-defined]
-        diffuse_tex.setSource(QUrl.fromLocalFile(str(Path(self.data.texture.base_color_url))))
-        specular_tex = Qt3DRender.QTextureLoader(material)  # type: ignore[attr-defined]
-        specular_tex.setSource(QUrl.fromLocalFile(str(Path(self.data.texture.roughness_url))))
+        diffuse_tex.setSource(QUrl.fromLocalFile(str(base_color_path)))
         material.setDiffuse(diffuse_tex)
-        material.setSpecular(specular_tex)
+        
+        # Загружаем specular текстуру (roughness), если доступна
+        # Если нет отдельной specular текстуры - используем base_color чтобы избежать предупреждения Qt3D
+        if roughness_path and roughness_path.exists():
+            specular_tex = Qt3DRender.QTextureLoader(material)  # type: ignore[attr-defined]
+            specular_tex.setSource(QUrl.fromLocalFile(str(roughness_path)))
+            material.setSpecular(specular_tex)
+        else:
+            # Используем base_color как specular чтобы избежать "specularTexture wasn't set"
+            specular_tex = Qt3DRender.QTextureLoader(material)  # type: ignore[attr-defined]
+            specular_tex.setSource(QUrl.fromLocalFile(str(base_color_path)))
+            material.setSpecular(specular_tex)
+        
         material.setShininess(0.0)
         return material
 
@@ -334,9 +430,9 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
 
         pos_attr = Qt3DCore.QAttribute(geometry)
         pos_attr.setName(Qt3DCore.QAttribute.defaultPositionAttributeName())
-        pos_attr.setVertexBaseType(Qt3DCore.QAttribute.Float)
+        pos_attr.setVertexBaseType(Qt3DCore.QAttribute.VertexBaseType.Float)
         pos_attr.setVertexSize(3)
-        pos_attr.setAttributeType(Qt3DCore.QAttribute.VertexAttribute)
+        pos_attr.setAttributeType(Qt3DCore.QAttribute.AttributeType.VertexAttribute)
         pos_attr.setBuffer(pos_buf)
         pos_attr.setByteStride(12)
         pos_attr.setCount(len(verts) // 3)
@@ -348,9 +444,9 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
 
         nrm_attr = Qt3DCore.QAttribute(geometry)
         nrm_attr.setName(Qt3DCore.QAttribute.defaultNormalAttributeName())  # "vertexNormal"
-        nrm_attr.setVertexBaseType(Qt3DCore.QAttribute.Float)
+        nrm_attr.setVertexBaseType(Qt3DCore.QAttribute.VertexBaseType.Float)
         nrm_attr.setVertexSize(3)
-        nrm_attr.setAttributeType(Qt3DCore.QAttribute.VertexAttribute)
+        nrm_attr.setAttributeType(Qt3DCore.QAttribute.AttributeType.VertexAttribute)
         nrm_attr.setBuffer(nrm_buf)
         nrm_attr.setByteStride(12)
         nrm_attr.setCount(len(verts) // 3)
@@ -359,7 +455,7 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
         # ------------------------------------------------------------------ renderer
         renderer = Qt3DRender.QGeometryRenderer(grid_ent)
         renderer.setGeometry(geometry)
-        renderer.setPrimitiveType(Qt3DRender.QGeometryRenderer.Lines)
+        renderer.setPrimitiveType(Qt3DRender.QGeometryRenderer.PrimitiveType.Lines)
         renderer.setVertexCount(len(verts) // 3)
 
         # ------------------------------------------------------------------ material
@@ -403,9 +499,3 @@ class View3DWindow(Qt3DExtras.Qt3DWindow):
             
         self.controller.deleteLater()
         super().closeEvent(event)
-
-
-# from tools.models import Gen3dResult
-# gen3dRes = {"progress": 100, "object": {"glb_url": "/Users/dmitry057/Library/Application Support/ARCHI//Mod/Archi/Resources/BIMExample/generations3d/0196f836-a02f-7672-ad5a-39e322d8f84d/0196f836-a02f-7672-ad5a-39e322d8f84d.glb", "fbx_url": "/Users/dmitry057/Library/Application Support/ARCHI//Mod/Archi/Resources/BIMExample/generations3d/0196f836-a02f-7672-ad5a-39e322d8f84d/0196f836-a02f-7672-ad5a-39e322d8f84d.fbx", "usdz_url": "/Users/dmitry057/Library/Application Support/ARCHI//Mod/Archi/Resources/BIMExample/generations3d/0196f836-a02f-7672-ad5a-39e322d8f84d/0196f836-a02f-7672-ad5a-39e322d8f84d.usdz", "obj_url": "/Users/dmitry057/Library/Application Support/ARCHI//Mod/Archi/Resources/BIMExample/generations3d/0196f836-a02f-7672-ad5a-39e322d8f84d/0196f836-a02f-7672-ad5a-39e322d8f84d.obj"}, "texture": {"base_color_url": "/Users/dmitry057/Library/Application Support/ARCHI//Mod/Archi/Resources/BIMExample/generations3d/0196f836-a02f-7672-ad5a-39e322d8f84d/0196f836-a02f-7672-ad5a-39e322d8f84d_base_color.png", "metallic_url": "/Users/dmitry057/Library/Application Support/ARCHI//Mod/Archi/Resources/BIMExample/generations3d/0196f836-a02f-7672-ad5a-39e322d8f84d/0196f836-a02f-7672-ad5a-39e322d8f84d_metallic.png", "roughness_url": "/Users/dmitry057/Library/Application Support/ARCHI//Mod/Archi/Resources/BIMExample/generations3d/0196f836-a02f-7672-ad5a-39e322d8f84d/0196f836-a02f-7672-ad5a-39e322d8f84d_roughness.png", "normal_url": "/Users/dmitry057/Library/Application Support/ARCHI//Mod/Archi/Resources/BIMExample/generations3d/0196f836-a02f-7672-ad5a-39e322d8f84d/0196f836-a02f-7672-ad5a-39e322d8f84d_normal.png"}}
-# view_3d_window = View3DWindow(Gen3dResult(**gen3dRes))
-# view_3d_window.show()
