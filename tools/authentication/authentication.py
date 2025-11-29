@@ -421,6 +421,8 @@ class AuthenticatedSession:
         self.on_error_callback = None
         self.has_internet_connection = True
         log.info("✅ AuthenticatedSession initialized successfully")
+        if self.masterAPI:
+            self.masterAPI.set_token_refresh_callback(self._refresh_token_sync)
 
     def _handle_network_error(self, err_msg: str, callback: Callable[[AsyncResponse], None]):
         self.has_internet_connection = False
@@ -527,6 +529,20 @@ class AuthenticatedSession:
         except Exception as e:
             log.error(f"❌ Auto-login error: {str(e)}")
             callback(AsyncResponse(error=Exception(str(e))))
+    
+    def _refresh_token_sync(self) -> Optional[Token]:
+        """Refresh token synchronously for API retries."""
+        try:
+            result = self.auth_service.auto_login()
+            if result and self.auth_service.access_token:
+                log.info("🔁 Token refreshed automatically")
+                return Token(
+                    access_token=self.auth_service.access_token,
+                    token_type=getattr(self.auth_service, "token_type", "Bearer")
+                )
+        except Exception as e:
+            log.error(f"❌ Token refresh failed: {e}")
+        return None
 
     def login(self, auth_input: AuthInput, callback: Callable[[AsyncResponse], None]):
         """Login with username and password."""

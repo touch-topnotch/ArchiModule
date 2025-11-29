@@ -133,3 +133,67 @@ class RemoveBackgroundOutput(BaseModel):
 
 class ClearBackgroundInput(BaseModel):
     image_base64: str
+
+
+# ==================== Video Generation Models ====================
+
+class VideoGenInput(BaseModel):
+    """Input for video generation API."""
+    image1_base64: str  # Start frame
+    image2_base64: str  # End frame
+    image3_base64: Optional[str] = None  # Optional intermediate frames
+    image4_base64: Optional[str] = None
+    prompt: Optional[str] = None
+    negative_prompt: Optional[str] = None
+    model_name: str = "kling-v1-6"
+    mode: str = "pro"  # "std" or "pro"
+    duration: int = 5  # 5 or 10 seconds
+    aspect_ratio: str = "16:9"  # "16:9", "9:16", "1:1"
+    cfg_scale: float = 0.5  # 0-1
+
+
+class VideoGenId(BaseModel):
+    """Task ID for video generation."""
+    task_id: str
+    request_id: Optional[str] = None
+    task_status: Optional[str] = None
+    
+    def get_id(self) -> str:
+        """Returns task_id."""
+        return self.task_id
+
+
+class VideoInfo(BaseModel):
+    """Video information from API."""
+    id: Optional[str] = None
+    duration: Optional[int] = None
+    url: Optional[str] = None
+
+    @field_validator("duration", mode="before")
+    @classmethod
+    def _parse_duration(cls, value):
+        if value in (None, ""):
+            return None
+        if isinstance(value, (int, float)):
+            return int(value)
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            raise ValueError("duration must be an integer")
+
+
+class VideoGenStatus(BaseModel):
+    """Status response for video generation."""
+    task_id: str
+    task_status: str  # "processing", "succeed", "failed"
+    task_status_msg: Optional[str] = None
+    progress: int = 0  # 0-100
+    estimated_time: Optional[int] = None  # seconds 
+    videos: List[VideoInfo] = []
+
+
+class VideoGenResult(BaseModel):
+    """Final video generation result."""
+    video_url: str
+    video_id: Optional[str] = None
+    duration: Optional[int] = None

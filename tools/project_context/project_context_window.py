@@ -1,28 +1,33 @@
 from typing import List, Optional, Callable, Dict, Any
+import os
+import shutil
+import datetime
 
 import FreeCAD
 import FreeCADGui
 
 from PySide.QtGui import QVector3D
 from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QTextEdit, QPushButton,
-                              QGroupBox, QFormLayout, QScrollArea, QDockWidget)
+                              QGroupBox, QFormLayout, QScrollArea, QDockWidget, QMessageBox)
 from PySide.QtCore import Qt
 
 from tools.view_3d import View3DStyle
 from tools.authentication.authentication import AuthenticatedSession
 from tools.master_api import MasterAPI
 from tools.models import Gen3dId, Gen3dSaved
-from tools.project_context.utils.gallery_utils import (ImageCell, View3DCell, 
+from tools.project_context.utils.gallery_utils import (ImageCell, View3DCell, VideoCell,
                                 GalleryStyle, GalleryWidget, select_images)
 from tools.full_view import (FullViewWindow, FullViewImageInteractable, FullView3DInteractable,
-                            FullViewButtonData, FullViewWindowData)
+                            FullViewVideoInteractable, FullViewButtonData, FullViewWindowData)
 import tools.exporting as exporting
 import tools.log as log
 from tools.project_context.utils.project_behaviour_base import ProjectBehaviour
-from tools.project_context.pipelines.prepare_for_3d_gen import PrepareFor3dGen
-from tools.project_context.pipelines.download_3d_behaviour import DownloadModelBehaviour
-from tools.project_context.pipelines.prepare_for_2d_gen import PrepareFor2dGen
-from tools.project_context.pipelines.gen_2d_behaviour import Generate2dBehaviour
+from tools.project_context.pipelines.gen_2d import PrepareFor2dGen, Generate2dBehaviour
+from tools.project_context.pipelines.gen_3d import PrepareFor3dGen, Generate3dBehaviour
+from tools.project_context.pipelines.gen_video import GenerateVideoBehaviour
+
+# Backward compatibility alias
+DownloadModelBehaviour = Generate3dBehaviour
 
 
 # UI Constants
@@ -37,9 +42,12 @@ class UIStrings:
     TO_RENDERS = "В рендеры!"
     TO_3D_MODELS = "В 3D Модели!"
     AI_3D = "AI 3D"
+    AI_VIDEO = "AI Видео"
+    TO_VIDEO = "Создать видео"
     DELETE = "Удалить"
     REPLACE = "Заменить"
     CLOSE = "Закрыть"
+    ADD_FRAME = "Добавить кадр"
 
 
 class UIStyles:
@@ -91,6 +99,7 @@ class ProjectContextWindow(QDockWidget):
         self._setup_context_section()
         self._setup_sketches_section()
         self._setup_2d_generation_section()
+        self._setup_video_generation_section()
         self._setup_3d_generation_section()
         
         # --- Load saved data ---
@@ -246,6 +255,43 @@ class ProjectContextWindow(QDockWidget):
         self.gen3d = GalleryWidget(self.gen3dstyle)
         self.main_layout.addWidget(self.gen3d)
     
+    def _setup_video_generation_section(self):
+        """Set up the video generation section."""
+        # Section header
+        video_label = QLabel(UIStrings.AI_VIDEO)
+        video_label.setStyleSheet(UIStyles.SUBHEADER_STYLE)
+        self.main_layout.addWidget(video_label)
+        
+        # Gallery
+        video_gallery_style = UIStyles.get_gallery_style()
+        self.gen_video = GalleryWidget(video_gallery_style)
+        
+        # Generation button
+        gen_video_button = QPushButton(UIStrings.TO_VIDEO)
+        gen_video_button.clicked.connect(self._start_video_generation)
+        
+        self.main_layout.addWidget(gen_video_button)
+        self.main_layout.addWidget(self.gen_video)
+    
+    def _start_video_generation(self):
+        """Start the video generation process."""
+        behaviour = GenerateVideoBehaviour(
+            self.authSession,
+            self.masterApi,
+            self.sketches,
+            self.gen2d,
+            self.gen_video
+        )
+        
+        # Set callback to connect video cell actions
+        def connect_video_cell_action(video_cell):
+            video_cell.action.connect(
+                lambda: self.full_view.show(self.gen_video_interactable(video_cell))
+            )
+        behaviour.on_video_cell_created = connect_video_cell_action
+        
+        self.behaviours.append(behaviour)
+    
     def replace_full_image(self, index):
         """Replace an image at the given index with a newly selected one."""
         path = select_images("sketches", True)
@@ -257,7 +303,13 @@ class ProjectContextWindow(QDockWidget):
     def gallery_on_delete_cell(self, gallery, item_name, cell):
         """Handle deletion of a cell from a gallery."""
         gallery.remove(cell.index)
-        exporting.remove_arr_item(item_name, cell.image_path)
+        # Handle different cell types
+        if isinstance(cell, ImageCell):
+            exporting.remove_arr_item(item_name, cell.image_path)
+        elif isinstance(cell, VideoCell):
+            exporting.remove_arr_item(item_name, cell.video_path)
+        elif isinstance(cell, View3DCell):
+            exporting.remove_arr_item(item_name, cell.view3dData.model_dump())
         self.full_view.close()
     
     def sketch_interactable(self, cell):
@@ -318,6 +370,56 @@ class ProjectContextWindow(QDockWidget):
             )
         return None
     
+    def gen_video_interactable(self, cell):
+        """Create a FullViewWindowData for a video generation cell."""
+        if isinstance(cell, VideoCell):
+            def on_frame_added(frame_path: str):
+                """Handle frame extraction - add to 2D generations."""
+                try:
+                    saved_path = self._save_video_frame_to_gen2d(frame_path)
+                    if not saved_path:
+                        raise RuntimeError("Файл кадра не найден")
+                    QMessageBox.information(
+                        FreeCADGui.getMainWindow(),
+                        "Успешно",
+                        "Кадр добавлен в 2D генерации"
+                    )
+                except Exception as e:
+                    log.error(f"Failed to add frame to 2D generations: {e}")
+                    QMessageBox.warning(
+                        FreeCADGui.getMainWindow(),
+                        "Ошибка",
+                        f"Не удалось добавить кадр: {e}"
+                    )
+                finally:
+                    try:
+                        if frame_path and os.path.exists(frame_path):
+                            os.remove(frame_path)
+                    except Exception:
+                        pass
+            
+            return FullViewWindowData(
+                interactable=FullViewVideoInteractable(
+                    cell.video_path,
+                    on_frame_added=on_frame_added
+                ),
+                buttons=[
+                    FullViewButtonData(
+                        name=UIStrings.ADD_FRAME,
+                        action=self._handle_add_video_frame
+                    ),
+                    FullViewButtonData(
+                        name=UIStrings.DELETE,
+                        action=lambda: self.gallery_on_delete_cell(self.gen_video, "generations_video", cell)
+                    ),
+                    FullViewButtonData(
+                        name=UIStrings.CLOSE,
+                        action=lambda: self.full_view.close()
+                    )
+                ]
+            )
+        return None
+    
     def load_from_model(self, model: exporting.ProjectContextModel):
         """Load data from a saved project model."""
         # Load project prompt
@@ -336,6 +438,14 @@ class ProjectContextWindow(QDockWidget):
             [ImageCell(image_path=path) for path in model.generations2d],
             self.gen2d_interactable
         )
+    
+        # Load video generations
+        video_paths = getattr(model, 'generations_video', [])
+        self._load_gallery_cells(
+            self.gen_video,
+            [VideoCell(path) for path in video_paths],
+            self.gen_video_interactable
+        )
         
         # Load 3D generations
         self._load_gallery_cells(
@@ -343,6 +453,8 @@ class ProjectContextWindow(QDockWidget):
             [View3DCell(data, self.view_3d_style) for data in model.generations3d if data.local is not None],
             self.gen3d_interactable
         )
+        
+      
     
     def _load_gallery_cells(self, gallery, cells, interactable_func):
         """Helper method to load cells into a gallery with proper event connections."""
@@ -350,6 +462,42 @@ class ProjectContextWindow(QDockWidget):
         for cell in gallery.cells:
             cell.action.connect(
                 lambda cell=cell: self.full_view.show(interactable_func(cell))
+            )
+
+    def _save_video_frame_to_gen2d(self, frame_path: str) -> Optional[str]:
+        """Copy extracted frame into generations2d and update gallery."""
+        if not frame_path or not os.path.exists(frame_path):
+            return None
+        project_path = exporting.get_project_path()
+        gen_dir = os.path.join(project_path, "generations2d")
+        os.makedirs(gen_dir, exist_ok=True)
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
+        dest_path = os.path.join(gen_dir, f"video_frame_{timestamp}.jpg")
+        shutil.copy(frame_path, dest_path)
+
+        frame_cell = ImageCell(image_path=dest_path)
+        self.gen2d.add_cell(frame_cell)
+        frame_cell.action.connect(lambda cell=frame_cell: self.full_view.show(self.gen2d_interactable(cell)))
+        exporting.save_arr_item("generations2d", dest_path)
+        return dest_path
+
+    def _handle_add_video_frame(self):
+        """Capture current video frame and add it to 2D generations."""
+        interactable = getattr(self.full_view, "interactable", None)
+        if not isinstance(interactable, FullViewVideoInteractable):
+            QMessageBox.warning(
+                FreeCADGui.getMainWindow(),
+                "Нет видео",
+                "Сейчас не открыт просмотр видео."
+            )
+            return
+
+        frame_path = interactable.capture_current_frame()
+        if not frame_path:
+            QMessageBox.warning(
+                FreeCADGui.getMainWindow(),
+                "Ошибка",
+                "Не удалось получить кадр."
             )
     
     def show_best_render(self):

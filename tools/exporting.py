@@ -13,6 +13,7 @@ class ProjectContextModel(BaseModel):
     sketches: List[str]
     generations2d: List[str]
     generations3d: List[Gen3dSaved]
+    generations_video: List[str] = []
     
 recall_proj_name = "None"
 def get_project_path(proj_name = None):
@@ -141,7 +142,8 @@ def load(project_name=None):
                 "slider_value": 0.5,
                 "sketches": [],
                 "generations2d": [],
-                "generations3d": []
+                "generations3d": [],
+                "generations_video": []
             }, f)
 
     with open(f"{project_path}/ProjectContext.json", "r") as f:

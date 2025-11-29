@@ -1,13 +1,37 @@
+import os
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
 import FreeCADGui
 import FreeCAD
-from PySide.QtCore import Qt, QObject, Signal, QEvent, QPropertyAnimation, QEasingCurve, QPoint, Property, QSequentialAnimationGroup, QPauseAnimation
-from PySide.QtGui import QPixmap, QPainter, QPainterPath, QWheelEvent, QPen, QColor, QLinearGradient
-from PySide.QtWidgets import QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDialog, QPushButton, QHBoxLayout, QDockWidget
+from PySide.QtCore import (Qt, QObject, Signal, QEvent, QPropertyAnimation, QEasingCurve, QPoint, Property,
+                           QSequentialAnimationGroup, QPauseAnimation, QRectF, QTimer)
+from PySide.QtGui import (QPixmap, QPainter, QPainterPath, QWheelEvent, QPen, QColor, QLinearGradient, QFont,
+                          QRadialGradient, QRegion)
+from PySide.QtWidgets import (QWidget, QLabel, QVBoxLayout, QScrollArea, QFileDialog, QPushButton, QHBoxLayout,
+                               QDockWidget, QStackedLayout, QSizePolicy)
 from PySide.QtSvgWidgets import QSvgWidget
-from PySide.QtCore import QTimer
+
+try:
+    from PySide6.QtMultimedia import QMediaPlayer
+    from PySide6.QtMultimediaWidgets import QVideoWidget
+    HAS_QT6_MEDIA = True
+    QMediaContent = None
+except ImportError:
+    try:
+        from PySide.QtMultimedia import QMediaPlayer, QMediaContent
+        from PySide.QtMultimediaWidgets import QVideoWidget
+        HAS_QT6_MEDIA = False
+    except ImportError:
+        QMediaPlayer = None
+        QVideoWidget = None
+        QMediaContent = None
+        HAS_QT6_MEDIA = False
 from tools.view_3d import View3DWindow
 import tools.exporting as exporting
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import BaseModel, ConfigDict
 from tools.models import Gen3dSaved
 from tools.master_api import MasterAPI
@@ -49,7 +73,9 @@ class GalleryCell(QWidget):
         elif isinstance(self, AnimatedCell):
             return AnimatedCell(self.svg_path)
         elif isinstance(self, View3DCell):
-            return View3DCell(self.view3dData)
+            return View3DCell(self.view3dData, self.view_3d_style)
+        elif isinstance(self, VideoCell):
+            return VideoCell(self.video_path)
         else:
             return GalleryCell()
 
@@ -489,6 +515,7 @@ class View3DCell(GalleryCell):
     def __init__(self, view3dData:Gen3dSaved, view_3d_style:View3DStyle, parent=None):
         super().__init__(parent=parent)
         self.view3dData = view3dData
+        self.view_3d_style = view_3d_style
         self.viewer = View3DWindow(self.view3dData.local, view_3d_style)
         self.container = QWidget.createWindowContainer(self.viewer)
         self.layout = QVBoxLayout()
@@ -502,6 +529,327 @@ class View3DCell(GalleryCell):
     def resize(self, width):
         self.viewer.resize(width, width)
         super().resize(width)
+
+class VideoCell(GalleryCell):
+    """Interactive video preview cell with hover playback and vignette overlay."""
+
+    def __init__(self, video_path: str, parent=None):
+        super().__init__(parent=parent)
+        self.video_path = video_path
+        self.preview_pixmap: Optional[QPixmap] = None
+        self.preview_container: Optional[QWidget] = None
+        self.overlay_label: Optional[QLabel] = None
+        self.video_widget = None
+        self.player = None
+        self._video_dimensions: tuple[int, int] = (0, 0)
+        self._base_size = 200
+        self._hovered = False
+        self._has_cpp_player = False
+        self.is_boarding = False
+
+        self._hover_leave_timer = QTimer(self)
+        self._hover_leave_timer.setSingleShot(True)
+        self._hover_leave_timer.timeout.connect(self._stop_preview_immediate)
+
+        self._load_first_frame()
+        self._probe_dimensions()
+        self._initialize_view()
+   
+    def _load_first_frame(self):
+        pixmap = self._extract_first_frame()
+        if pixmap is None:
+            pixmap = self._create_placeholder_pixmap(256)
+        self.preview_pixmap = pixmap
+        if pixmap and pixmap.width() > 0 and pixmap.height() > 0:
+            self._video_dimensions = (pixmap.width(), pixmap.height())
+
+    def _probe_dimensions(self):
+        if self._video_dimensions != (0, 0):
+            return
+        ffprobe = shutil.which("ffprobe")
+        if not ffprobe or not self.video_path or not os.path.exists(self.video_path):
+            return
+        cmd = [
+            ffprobe,
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "csv=p=0:s=x",
+            self.video_path,
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            output = result.stdout.strip()
+            if output:
+                width_str, height_str = output.split("x")
+                self._video_dimensions = (int(width_str), int(height_str))
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+    def _initialize_view(self):
+        from tools.video_player import VideoPlayerWidget, HAS_CPP_PLAYER
+
+        if HAS_CPP_PLAYER:
+            try:
+                preview_path = self._ensure_preview_video()
+                self._setup_cpp_player(VideoPlayerWidget, preview_path)
+                self._has_cpp_player = True
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                FreeCAD.Console.PrintWarning(f"VideoCell: failed to init C++ video preview: {exc}\n")
+
+        self._setup_static_preview()
+
+    def _setup_cpp_player(self, player_cls, preview_path: Optional[str]):
+        self.preview_container = QWidget(self)
+        self.preview_container.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.preview_container.setMouseTracking(True)
+        self.preview_container.installEventFilter(self)
+
+        self.video_widget = player_cls(preview_path or self.video_path, parent=self.preview_container)
+        self.video_widget.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.video_widget.setMouseTracking(True)
+        self.video_widget.installEventFilter(self)
+        self.video_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        if hasattr(self.video_widget, "set_controls_visible"):
+            self.video_widget.set_controls_visible(False)
+        if hasattr(self.video_widget, "set_auto_loop"):
+            self.video_widget.set_auto_loop(True)
+        self._prime_cpp_preview()
+
+        self.overlay_label = QLabel(self.preview_container)
+        self.overlay_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.overlay_label.setStyleSheet("background: transparent;")
+        self.overlay_label.installEventFilter(self)
+
+        stack = QStackedLayout(self.preview_container)
+        stack.setContentsMargins(0, 0, 0, 0)
+        stack.setStackingMode(QStackedLayout.StackAll)
+        stack.addWidget(self.video_widget)
+        stack.addWidget(self.overlay_label)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.preview_container)
+        self.setLayout(layout)
+        self.resize(self._base_size)
+
+    def _setup_static_preview(self):
+        self.label = QLabel(self)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+        self._render_static_preview(self._base_size)
+
+    def _extract_first_frame(self) -> Optional[QPixmap]:
+        if not self.video_path or not os.path.exists(self.video_path):
+            return None
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            FreeCAD.Console.PrintWarning("ffmpeg not found, cannot create video thumbnails\n")
+            return None
+        temp_file = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                temp_file = tmp.name
+            cmd = [
+                ffmpeg,
+                "-loglevel", "error",
+                "-y",
+                "-i", self.video_path,
+                "-frames:v", "1",
+                temp_file,
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            pixmap = QPixmap(temp_file)
+            if pixmap.isNull():
+                return None
+            return pixmap
+        except Exception as exc:  # pylint: disable=broad-except
+            FreeCAD.Console.PrintWarning(f"Failed to create video thumbnail: {exc}\n")
+            return None
+        finally:
+            if temp_file and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except OSError:
+                    pass
+
+    def _ensure_preview_video(self) -> Optional[str]:
+        if not self.video_path or not os.path.exists(self.video_path):
+            return None
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            return None
+
+        original = Path(self.video_path)
+        base_dir = original.parent.parent / "generations_video_preview"
+        preview_name = f"{original.stem}_preview{original.suffix}"
+        preview_path = base_dir / preview_name
+
+        if preview_path.exists():
+            return str(preview_path)
+
+        try:
+            base_dir.mkdir(parents=True, exist_ok=True)
+            width, height = self._video_dimensions
+            if width <= 0 or height <= 0:
+                width, height = 512, 512
+            crop_size = min(width, height)
+            crop_filter = "crop=min(iw\\,ih):min(iw\\,ih):(iw-ow)/2:(ih-oh)/2"
+            cmd = [
+                ffmpeg,
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                self.video_path,
+                "-vf",
+                crop_filter,
+                str(preview_path),
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if preview_path.exists():
+                return str(preview_path)
+        except Exception as exc:  # pylint: disable=broad-except
+            FreeCAD.Console.PrintWarning(f"Failed to generate preview video: {exc}\n")
+        return None
+
+    def _create_placeholder_pixmap(self, size: int) -> QPixmap:
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, size, size, 10, 10)
+        painter.fillPath(path, QColor("#2b2b2b"))
+        painter.setPen(QPen(QColor("#444444"), 2))
+        painter.drawPath(path)
+        painter.setPen(QColor("#ffffff"))
+        font = QFont()
+        font.setPointSize(int(size * 0.15))
+        painter.setFont(font)
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "VIDEO")
+        painter.end()
+        return pixmap
+
+    def resize(self, width):
+        self._base_size = width
+        if self._has_cpp_player and self.preview_container:
+            target_size = (width, width)
+            self.preview_container.setFixedSize(*target_size)
+            if self.video_widget:
+                self.video_widget.setFixedSize(*target_size)
+            self.setFixedSize(*target_size)
+            self._apply_round_mask(*target_size)
+            self._update_vignette(*target_size)
+        else:
+            self._render_static_preview(width)
+        self.update()
+
+    def _render_static_preview(self, width: int):
+        if width <= 0:
+            return
+        source = self.preview_pixmap or self._create_placeholder_pixmap(width)
+        scaled = source.scaled(width, width, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                               Qt.TransformationMode.SmoothTransformation)
+        x = max(0, (scaled.width() - width) // 2)
+        y = max(0, (scaled.height() - width) // 2)
+        square = scaled.copy(x, y, width, width)
+
+        rounded = QPixmap(width, width)
+        rounded.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(rounded)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, width, width, 10, 10)
+        painter.setClipPath(path)
+        painter.drawPixmap(0, 0, square)
+        painter.end()
+
+        if hasattr(self, "label"):
+            self.label.setPixmap(rounded)
+            self.label.setFixedSize(width, width)
+        self.setFixedSize(width, width)
+
+    def _prime_cpp_preview(self):
+        if not self.video_widget:
+            return
+        if hasattr(self.video_widget, "play"):
+            try:
+                self.video_widget.play()
+
+                def _pause():
+                    if hasattr(self.video_widget, "pause"):
+                        try:
+                            self.video_widget.pause()
+                        except Exception:
+                            pass
+
+                QTimer.singleShot(60, _pause)
+            except Exception:
+                pass
+
+    def _apply_round_mask(self, width: int, height: int):
+        if not self.preview_container:
+            return
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, width, height, 10, 10)
+        region = QRegion(path.toFillPolygon().toPolygon())
+        self.preview_container.setMask(region)
+
+    def _update_vignette(self, width: int, height: int):
+        if not self.overlay_label:
+            return
+        vignette = QPixmap(width, height)
+        vignette.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(vignette)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        gradient = QRadialGradient(width / 2, height / 2, max(width, height) * 0.65)
+        gradient.setColorAt(0.55, QColor(0, 0, 0, 0))
+        gradient.setColorAt(1.0, QColor(0, 0, 0, 170))
+        painter.fillRect(0, 0, width, height, gradient)
+        painter.end()
+        self.overlay_label.setPixmap(vignette)
+        self.overlay_label.setFixedSize(width, height)
+
+    def eventFilter(self, obj, event):
+        if obj == self.video_widget or obj == self.overlay_label:
+            if event.type() == QEvent.Type.Enter:
+                if not self.is_boarding:
+                    self._start_preview()
+                self.is_boarding = not self.is_boarding
+            elif event.type() == QEvent.Type.Leave:
+                if not self.is_boarding:
+                    self._schedule_preview_stop()
+        return super().eventFilter(obj, event)
+
+    def _start_preview(self):
+        if not self._has_cpp_player or not self.video_widget:
+            return
+        self._hovered = True
+        if self._hover_leave_timer.isActive():
+            self._hover_leave_timer.stop()
+        if hasattr(self.video_widget, "play"):
+            self.video_widget.play()
+
+    def _schedule_preview_stop(self):
+        if not self._has_cpp_player:
+            return
+        self._hovered = False
+        self._hover_leave_timer.stop()
+        self._hover_leave_timer.start(80)
+
+    def _stop_preview_immediate(self):
+        if not self._has_cpp_player or not self.video_widget:
+            return
+        if hasattr(self.video_widget, "pause"):
+            self.video_widget.pause()
+        if hasattr(self.video_widget, "stop"):
+            self.video_widget.stop()
 
 class GalleryStyle(BaseModel):
     number_of_cols: int = 3

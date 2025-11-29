@@ -1,4 +1,8 @@
 #add ArchiGui here
+
+# Find Qt6 with Multimedia support
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Multimedia MultimediaWidgets)
+
 include_directories(
         ${CMAKE_BINARY_DIR}
         ${CMAKE_SOURCE_DIR}/src
@@ -15,6 +19,8 @@ link_directories(${OCC_LIBRARY_DIR})
 set(ArchiGui_LIBS
         ArchiModule
         FreeCADGui
+        Qt6::Multimedia
+        Qt6::MultimediaWidgets
 )
 
 
@@ -29,6 +35,7 @@ SOURCE_GROUP("Resources" FILES ${ArchiResource_SRCS})
 
 SET(ArchiGui_SRCS_Module
         ArchiGui.cpp
+        ArchiGuiPy.cpp
         Resources/Archi.qrc
         PreCompiled.cpp
         PreCompiled.h
@@ -40,6 +47,11 @@ SOURCE_GROUP("Module" FILES ${ArchiGui_SRCS_Module})
 SET(ArchiGui_SRCS_Commands
         Command.cpp
 )
+
+SET(ArchiGui_SRCS_Widgets
+        VideoPlayerWidget.cpp
+        VideoPlayerWidget.h
+)
 SOURCE_GROUP("Commands" FILES ${ArchiGui_SRCS_Commands})
 
 
@@ -48,6 +60,7 @@ SET(ArchiGui_SRCS
         ${ArchiResource_SRCS}
         ${ArchiGui_SRCS_Module}
         ${ArchiGui_SRCS_Commands}
+        ${ArchiGui_SRCS_Widgets}
 )
 
 if(FREECAD_USE_PCH)

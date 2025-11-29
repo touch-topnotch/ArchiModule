@@ -10,6 +10,7 @@ from tools.view_3d import View3DWindow
 import tools.exporting as exporting
 from tools.models import Gen2dResult
 from tools.image_viewer import ImageViewer
+from tools.video_player import VideoPlayerWidget
 from typing import List, Dict, Callable, Optional
 from pydantic import BaseModel, ConfigDict, SkipValidation
 
@@ -263,5 +264,43 @@ class FullViewImageInteractable(QWidget):
         if self.viewer:
             self.viewer.resizeEvent(None)  # Принудительно вызываем resizeEvent
 
+
+class FullViewVideoInteractable(QWidget):
+    """Интерактивный просмотр видео с плеером"""
+    
+    def __init__(self, video_path: str, on_frame_added: Optional[Callable[[str], None]] = None, parent=None):
+        super(FullViewVideoInteractable, self).__init__(parent)
+        self.setWindowTitle("Видео")
+        self.on_frame_added = on_frame_added
+        
+        self.player = VideoPlayerWidget(video_path, on_frame_added=on_frame_added, parent=self)
+        
+        # Set size policy
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.player.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        # Set reasonable size limits
+        self.setMinimumSize(400, 300)
+        
+        self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.addWidget(self.player)
+        self.setLayout(self.layout)
+        self.player.show()
+    
+    def closeEvent(self, event):
+        """Cleanup on close."""
+        if hasattr(self, 'player'):
+            self.player.closeEvent(event)
+        super().closeEvent(event)
+
+    def capture_current_frame(self) -> Optional[str]:
+        """Capture current frame and notify callback."""
+        if not hasattr(self, 'player'):
+            return None
+        frame_path = self.player.capture_frame()
+        if frame_path and self.on_frame_added:
+            self.on_frame_added(frame_path)
+        return frame_path
 
 

@@ -9,11 +9,12 @@ import requests
 import asyncio
 import inspect
 from tools.models import (Gen2dInput, Gen2dResult, Gen3dInput, Gen3dId, Gen3dResult, Gen3dModel,
-                          Token, RemoveBackgroundInput, ClearBackgroundInput, AsyncResponse)
+                          Token, RemoveBackgroundInput, ClearBackgroundInput, AsyncResponse,
+                          VideoGenInput, VideoGenId, VideoGenStatus, VideoInfo)
 from tools.convert_png import convert_png
 from PySide.QtCore import QObject, Signal, QRunnable, QThreadPool, Slot
 import tools.log as log
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 class UIStrings:
     """Constant strings used in the UI."""
@@ -89,6 +90,7 @@ class MasterAPI(QObject):
         # Keep strong references to active tasks to prevent GC before slots run
         self._active_tasks = set()
         # No extra main-thread relay; Qt will marshal signal deliveries appropriately
+        self._token_refresh_callback: Optional[Callable[[], Optional[Token]]] = None
 
     def _invoke_on_main(self, payload):
         # Deprecated path; kept for compatibility if referenced elsewhere
@@ -177,8 +179,13 @@ class MasterAPI(QObject):
             log.error(f"API health check failed: {e}")
             return False
     
+    def set_token_refresh_callback(self, callback: Callable[[], Optional[Token]]):
+        """Register a function that refreshes tokens on authorization failure."""
+        self._token_refresh_callback = callback
+
     def _make_api_request(self, method: str, endpoint: str, token: Token, payload: dict = None, 
-                         params: dict = None, timeout: int = 30, expected_keys: list = None) -> dict:
+                         params: dict = None, timeout: int = 30, expected_keys: list = None,
+                         _retry_on_unauthorized: bool = True) -> dict:
         """Универсальный метод для выполнения API запросов."""
         # Проверяем подключение к интернету
         if not self._check_internet_connection():
@@ -235,6 +242,15 @@ class MasterAPI(QObject):
                 log.error(f"{method}: Token type: '{token.token_type}'")
                 log.error(f"{method}: Token expired: {token.is_expired}")
                 log.error(f"{method}: Response: {response_text[:500]}")
+                if _retry_on_unauthorized and self._token_refresh_callback:
+                    new_token = self._token_refresh_callback()
+                    if new_token:
+                        token.access_token = new_token.access_token
+                        token.token_type = new_token.token_type
+                        log.info(f"{method}: Retrying request after token refresh")
+                        return self._make_api_request(
+                            method, endpoint, token, payload, params, timeout, expected_keys, False
+                        )
             else:
                 log.error(f"{method}: HTTP {status_code}: {response_text[:500]}")
             
@@ -467,6 +483,94 @@ class MasterAPI(QObject):
         )
         
         return Gen2dResult(**data)
+
+    async def generate_video(self, token: Token, videoGenInput: VideoGenInput):
+        """Generates video using multi-image2video API."""
+        payload = {}
+        
+        # Images (at least 2 required)
+        payload["image1_base64"] = videoGenInput.image1_base64
+        payload["image2_base64"] = videoGenInput.image2_base64
+        if videoGenInput.image3_base64:
+            payload["image3_base64"] = videoGenInput.image3_base64
+        if videoGenInput.image4_base64:
+            payload["image4_base64"] = videoGenInput.image4_base64
+        
+        # Parameters
+        payload["model_name"] = videoGenInput.model_name
+        payload["mode"] = videoGenInput.mode
+        payload["duration"] = videoGenInput.duration
+        payload["aspect_ratio"] = videoGenInput.aspect_ratio
+        payload["cfg_scale"] = videoGenInput.cfg_scale
+        
+        if videoGenInput.prompt:
+            payload["prompt"] = videoGenInput.prompt
+        if videoGenInput.negative_prompt:
+            payload["negative_prompt"] = videoGenInput.negative_prompt
+        
+        log.debug(f"generate_video: Payload keys: {list(payload.keys())}")
+        
+        # Execute API request
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(
+            None,
+            self._make_api_request,
+            "POST",
+            "/tools/v1/video_generator",
+            token,
+            payload,
+            None,  # params
+            120,  # timeout for video generation request
+            ["task_id"]  # expected_keys
+        )
+        
+        log.debug(f"generate_video: Response: {data}")
+        
+        # Handle response
+        return VideoGenId(
+            task_id=data.get("task_id"),
+            request_id=data.get("request_id"),
+            task_status=data.get("task_status")
+        )
+    
+    async def get_video(self, token: Token, task_id: str):
+        """Gets video generation status and result."""
+        payload = {"task_id": task_id}
+        
+        # Execute API request
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(
+            None,
+            self._make_api_request,
+            "POST",
+            "/tools/v1/get-video",
+            token,
+            payload,
+            None,  # params
+            30,  # timeout
+            None  # expected_keys - can vary
+        )
+        
+        log.debug(f"get_video: Response: {data}")
+        
+        # Parse videos list
+        videos = []
+        if "videos" in data and isinstance(data["videos"], list):
+            for v in data["videos"]:
+                videos.append(VideoInfo(
+                    id=v.get("id"),
+                    duration=v.get("duration"),
+                    url=v.get("url")
+                ))
+        
+        return VideoGenStatus(
+            task_id=data.get("task_id", task_id),
+            task_status=data.get("task_status", "unknown"),
+            task_status_msg=data.get("task_status_msg"),
+            progress=data.get("progress", 0),
+            estimated_time=data.get("estimated_time"),
+            videos=videos
+        )
 
     async def get_3d_obj(self, token: Token, obj_id: Gen3dId):
         """Получает 3D объект по ID задачи."""

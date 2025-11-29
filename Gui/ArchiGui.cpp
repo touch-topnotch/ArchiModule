@@ -47,24 +47,11 @@ void loadArchiResource()
 
 namespace ArchiGui
 {
-class Module: public Py::ExtensionModule<Module>
-{
-public:
-    Module()
-        : Py::ExtensionModule<Module>("ArchiGui")
-    {
-        initialize("This module is the ArchiGui module.");  // register with Python
-    }
-
-private:
-};
-
-PyObject* initModule()
-{
-    return Base::Interpreter().addModule(new Module);
-}
+// Forward declaration - actual implementation in ArchiGuiPy.cpp
+PyObject* initModule();
 
 }  // namespace ArchiGui
+
 
 
 /* Python entry */

@@ -37,12 +37,17 @@ set(Archi_Python_SRCS
     tools/exporting.py
     tools/project_context/project_context_command.py
     tools/project_context/__init__.py
-    tools/project_context/pipelines/download_3d_behaviour.py
     tools/project_context/pipelines/form_window.py
     tools/project_context/pipelines/__init__.py
-    tools/project_context/pipelines/gen_2d_behaviour.py
-    tools/project_context/pipelines/prepare_for_2d_gen.py
-    tools/project_context/pipelines/prepare_for_3d_gen.py
+    tools/project_context/pipelines/gen_2d/__init__.py
+    tools/project_context/pipelines/gen_2d/prepare.py
+    tools/project_context/pipelines/gen_2d/behaviour.py
+    tools/project_context/pipelines/gen_3d/__init__.py
+    tools/project_context/pipelines/gen_3d/prepare.py
+    tools/project_context/pipelines/gen_3d/behaviour.py
+    tools/project_context/pipelines/gen_video/__init__.py
+    tools/project_context/pipelines/gen_video/prepare.py
+    tools/project_context/pipelines/gen_video/behaviour.py
     tools/project_context/utils/image_utils.py
     tools/project_context/utils/__init__.py
     tools/project_context/utils/widgets.py
@@ -54,6 +59,7 @@ set(Archi_Python_SRCS
     tools/authentication/authentication.py
     tools/authentication/authentication_window.py
     tools/view_3d.py
+    tools/video_player.py
     tools/convert_png.py
 )
 
