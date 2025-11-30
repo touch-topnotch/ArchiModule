@@ -203,7 +203,8 @@ class FullViewWindow(QDockWidget):
 
         
 class FullView3DInteractable(QWidget):
-    def __init__(self, view3dData:Gen2dResult, parent=None):
+    def __init__(self, view3dData, parent=None):
+        """Initialize with Gen3dResult (not Gen3dSaved)."""
         super(FullView3DInteractable, self).__init__(parent)
         self.viewer = View3DWindow(view3dData)
         self.container = QWidget.createWindowContainer(self.viewer)
@@ -227,10 +228,6 @@ class FullView3DInteractable(QWidget):
     def close(self):
         self.viewer.close()
         super().close()
-
-    def resize(self, width):
-        self.viewer.resize(width, width)
-        super().resize(width)
     
 class FullViewImageInteractable(QWidget):
     """Интерактивный просмотр изображений с зумом, как в Google Maps"""

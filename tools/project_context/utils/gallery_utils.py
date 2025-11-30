@@ -511,16 +511,58 @@ class LoadingCell(GalleryCell):
         callback()
 
 class View3DCell(GalleryCell):
+    """3D model cell with expand button overlay."""
     view3dData:Gen3dSaved = None
+    
     def __init__(self, view3dData:Gen3dSaved, view_3d_style:View3DStyle, parent=None):
         super().__init__(parent=parent)
         self.view3dData = view3dData
         self.view_3d_style = view_3d_style
         self.viewer = View3DWindow(self.view3dData.local, view_3d_style)
         self.container = QWidget.createWindowContainer(self.viewer)
+        
+        # Main layout
         self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(self.container)
         self.setLayout(self.layout)
+        
+        # Add expand button overlay
+        self._setup_expand_button()
+    
+    def _setup_expand_button(self):
+        """Create expand button in the corner of the cell."""
+        self.expand_button = QPushButton("⤢", self)
+        self.expand_button.setFixedSize(32, 32)
+        self.expand_button.setToolTip("Открыть")
+        self.expand_button.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(0, 122, 204, 0.8);
+                border: none;
+                border-radius: 6px;
+                color: white;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: rgba(0, 136, 187, 0.95);
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 100, 180, 1.0);
+            }
+        """)
+        self.expand_button.clicked.connect(self._on_expand_clicked)
+        self.expand_button.raise_()
+    
+    def _on_expand_clicked(self):
+        """Handle expand button click - trigger the action signal."""
+        self.trigger()
+    
+    def _update_button_position(self, width):
+        """Position the expand button in bottom-right corner."""
+        margin = 8
+        btn_size = 32
+        self.expand_button.move(width - btn_size - margin, width - btn_size - margin)
    
     def close(self):
         self.viewer.close()
@@ -529,6 +571,17 @@ class View3DCell(GalleryCell):
     def resize(self, width):
         self.viewer.resize(width, width)
         super().resize(width)
+        self._update_button_position(width)
+    
+    def mousePressEvent(self, event):
+        """Override to prevent triggering action on mouse press (used for rotation)."""
+        # Don't call super() to prevent GalleryCell.trigger() on click
+        # The 3D viewer uses mouse for rotation
+        pass
+    
+    def mouseReleaseEvent(self, event):
+        """Override to prevent default behavior."""
+        pass
 
 class VideoCell(GalleryCell):
     """Interactive video preview cell with hover playback and vignette overlay."""

@@ -48,6 +48,7 @@ class UIStrings:
     REPLACE = "Заменить"
     CLOSE = "Закрыть"
     ADD_FRAME = "Добавить кадр"
+    USE_MODEL = "Использовать"
 
 
 class UIStyles:
@@ -355,9 +356,15 @@ class ProjectContextWindow(QDockWidget):
     def gen3d_interactable(self, cell):
         """Create a FullViewWindowData for a 3D generation cell."""
         if isinstance(cell, View3DCell):
+            # FullView3DInteractable expects Gen3dResult (with .object), not Gen3dSaved
+            view_data = cell.view3dData.local if cell.view3dData.local else cell.view3dData.online
             return FullViewWindowData(
-                interactable=FullView3DInteractable(cell.view3dData),
+                interactable=FullView3DInteractable(view_data),
                 buttons=[
+                    FullViewButtonData(
+                        name=UIStrings.USE_MODEL,
+                        action=lambda: self._import_3d_model(cell)
+                    ),
                     FullViewButtonData(
                         name=UIStrings.DELETE, 
                         action=lambda: self.gallery_on_delete_cell(self.gen3d, "generations3d", cell)
@@ -369,6 +376,91 @@ class ProjectContextWindow(QDockWidget):
                 ]
             )
         return None
+    
+    def _import_3d_model(self, cell: View3DCell):
+        """Import 3D model into FreeCAD document."""
+        # Get model path from Gen3dResult.object.obj_url
+        model_path = None
+        gen3d_result = cell.view3dData.local if cell.view3dData.local else cell.view3dData.online
+        
+        if gen3d_result and gen3d_result.object:
+            # Prefer OBJ, then FBX, then GLB
+            if gen3d_result.object.obj_url:
+                model_path = gen3d_result.object.obj_url
+            elif gen3d_result.object.fbx_url:
+                model_path = gen3d_result.object.fbx_url
+            elif gen3d_result.object.glb_url:
+                model_path = gen3d_result.object.glb_url
+        
+        if not model_path:
+            QMessageBox.warning(
+                FreeCADGui.getMainWindow(),
+                "Ошибка",
+                "Путь к модели не найден"
+            )
+            return
+        
+        if not os.path.exists(model_path):
+            QMessageBox.warning(
+                FreeCADGui.getMainWindow(),
+                "Ошибка",
+                f"Файл модели не найден: {model_path}"
+            )
+            return
+        
+        try:
+            # Ensure we have an active document
+            doc = FreeCAD.ActiveDocument
+            if doc is None:
+                doc = FreeCAD.newDocument("Main")
+                log.info("_import_3d_model: Created new document 'Main'")
+            
+            # Get file extension
+            ext = os.path.splitext(model_path)[1].lower()
+            
+            # Import based on file type
+            if ext == '.obj':
+                import Mesh
+                Mesh.insert(model_path, doc.Name)
+                log.info(f"_import_3d_model: Imported OBJ mesh: {model_path}")
+            elif ext in ('.step', '.stp', '.iges', '.igs', '.brep'):
+                import Part
+                Part.insert(model_path, doc.Name)
+                log.info(f"_import_3d_model: Imported Part: {model_path}")
+            elif ext == '.stl':
+                import Mesh
+                Mesh.insert(model_path, doc.Name)
+                log.info(f"_import_3d_model: Imported STL mesh: {model_path}")
+            else:
+                # Generic import
+                import ImportGui
+                ImportGui.insert(model_path, doc.Name)
+                log.info(f"_import_3d_model: Imported with ImportGui: {model_path}")
+            
+            # Fit view to show the imported model
+            FreeCADGui.SendMsgToActiveView("ViewFit")
+            
+            # Recompute document
+            doc.recompute()
+            
+            # Close full view
+            self.full_view.close()
+            
+            QMessageBox.information(
+                FreeCADGui.getMainWindow(),
+                "Успешно",
+                f"Модель импортирована: {os.path.basename(model_path)}"
+            )
+            
+        except Exception as e:
+            log.error(f"_import_3d_model: Failed to import: {e}")
+            import traceback
+            log.error(traceback.format_exc())
+            QMessageBox.warning(
+                FreeCADGui.getMainWindow(),
+                "Ошибка",
+                f"Не удалось импортировать модель: {e}"
+            )
     
     def gen_video_interactable(self, cell):
         """Create a FullViewWindowData for a video generation cell."""
